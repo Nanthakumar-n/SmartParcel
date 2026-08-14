@@ -53,3 +53,11 @@ export function zodFieldErrors(
   }
   return { success: false, error: errors };
 }
+
+/**
+ * Convert ZodError directly to ActionResult error format.
+ */
+export function validationError(error: { flatten: () => { fieldErrors: Record<string, string[] | undefined> } }): ActionResult<never> {
+  return zodFieldErrors(error.flatten().fieldErrors);
+}
+

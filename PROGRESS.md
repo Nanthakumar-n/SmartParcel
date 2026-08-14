@@ -10,7 +10,7 @@
 **Phase 1 — Foundation & Core Booking (v1 Web Admin)**
 
 ## Current Status
-🟢 **Foundation & Auth Complete. Ready for Hub & Fleet Management CRUD.**
+🟢 **Fleet Administration Complete (Hubs, Drivers & Vehicles). Ready for Trip Schedules & LR Creation.**
 
 ---
 
@@ -105,30 +105,52 @@
   - `app/(dashboard)/error.tsx`: Root dashboard error boundary with Sentry reporting
   - `app/(dashboard)/dashboard/loading.tsx`: Skeleton loader
   - `app/(dashboard)/dashboard/page.tsx`: Operational dashboard with 4 metric cards, recent LR table, and quick setup checklist
-- [x] **Skill Optimization**: Updated `automated-ui-verification` skill with a strict **2-attempt max fail-fast error escalation protocol** to eliminate subagent looping.
-- [x] **Code Quality & Build Verification**:
-  - `npm run lint` — 0 errors, 0 warnings
-  - `npx tsc --noEmit` — 0 errors
-  - `npm run build` — Production build succeeds
-  - Git repository clean with conventional commit history
 
 ---
 
-## 🔲 Up Next — Session 3 Build Queue
+## ✅ Completed (Session 3 — 2026-08-14)
 
-1. **Hub Management CRUD (`/hubs` — Fleet Owner Only)**:
-   - Hub listing page with branch cards/table (hub code, name, city, phone, status).
-   - Create Hub modal/form with hub code auto-uppercase validation (e.g. `MUM`, `DEL`).
-   - Edit & deactivate hub actions.
-2. **Vehicle Management CRUD (`/vehicles` — Fleet Owner Only)**:
-   - Truck registry with vehicle type badges (`TRUCK`, `MINI_TRUCK`, `TEMPO`), capacity in tonnes, and default driver assignment.
-   - Vehicle number validation with standard Indian format (`MH 04 AB 1234`).
-3. **Driver Registry CRUD (`/drivers` — Fleet Owner Only)**:
-   - Driver profiles (name, phone, license number, active status).
-4. **Trip Schedule Management (`/trip-schedules` — Fleet Owner Only)**:
-   - Configure recurring routes between hubs (days of week, departure times, assigned vehicle/driver).
-5. **User Management (`/users` — Fleet Owner Only)**:
-   - Invite Hub Managers and assign them to specific hub branches.
+### Milestone 3: Fleet Administration (Hubs, Drivers & Vehicles CRUD)
+- [x] **RLS Helper Fix Migration (`20250101000010_fix_rls_functions.sql`)**:
+  - Added `SECURITY DEFINER` with `SET search_path = public` on `current_tenant_id()`, `current_user_role()`, and `current_user_hub_ids()` to eliminate recursive policy evaluation statement timeouts.
+- [x] **Validation Schemas**:
+  - `lib/validations/hub.ts`: Zod schema with uppercase `hub_code` (`/^[A-Z0-9]{2,10}$/`), name, address, Indian PIN code, and phone regex.
+  - `lib/validations/driver.ts`: Zod schema for full name, `+91` E.164 phone, and license number.
+  - `lib/validations/vehicle.ts`: Zod schema for Indian vehicle number (`/^[A-Z]{2}\s\d{2}\s[A-Z]{1,2}\s\d{4}$/`), vehicle types (`TRUCK`, `MINI_TRUCK`, `TEMPO`), capacity in tonnes, and default driver.
+- [x] **Database Query Helpers**:
+  - `lib/db/hubs.ts`: `getHubsByTenant`, `getHubById`, `insertHub`, `updateHub`, `toggleHubActive`.
+  - `lib/db/drivers.ts`: `getDriversByTenant`, `getDriverById`, `insertDriver`, `updateDriver`, `toggleDriverActive`.
+  - `lib/db/vehicles.ts`: `getVehiclesByTenant` with joined default driver, `getVehicleById`, `insertVehicle`, `updateVehicle`, `toggleVehicleActive`.
+- [x] **Server Actions**:
+  - `app/(dashboard)/hubs/actions.ts`: `createHubAction`, `updateHubAction`, `toggleHubStatusAction` with duplicate code error handling.
+  - `app/(dashboard)/drivers/actions.ts`: `createDriverAction`, `updateDriverAction`, `toggleDriverStatusAction`.
+  - `app/(dashboard)/vehicles/actions.ts`: `createVehicleAction`, `updateVehicleAction`, `toggleVehicleStatusAction`.
+- [x] **UI Pages & Components**:
+  - `app/(dashboard)/hubs/`: Responsive page with 3 metric cards, search & filter toolbar, `HubTable`, `HubDialog`, and `loading.tsx`.
+  - `app/(dashboard)/drivers/`: Page with metric cards, search filter, `DriverTable` with formatted call links, `DriverDialog`, and `loading.tsx`.
+  - `app/(dashboard)/vehicles/`: Fleet registry with status counts (`AVAILABLE`, `IN_TRANSIT`, `UNDER_MAINTENANCE`), `VehicleTable` with badges, `VehicleDialog`, and `loading.tsx`.
+- [x] **Code Quality & Build Verification Gate**:
+  - `npx tsc --noEmit`: 0 errors.
+  - `npm run lint`: 0 warnings, 0 errors.
+  - `npm run build`: Production build passes.
+- [x] **Automated Browser Subagent Verification**:
+  - Tested Hub creation modal, verified invalid phone validation error trigger.
+  - Verified creation of "Pune Wagholi Hub" (`PUN`).
+  - Captured desktop (1440×900) & mobile (375×812) screenshots for Hubs, Drivers, and Vehicles.
+
+---
+
+## 🔲 Up Next — Session 4 Build Queue
+
+1. **Trip Schedule Management (`/trip-schedules` — Fleet Owner Only)**:
+   - Configure recurring routes between hubs (origin hub, destination hub, days of week, departure times, default vehicle/driver).
+2. **User Management & Branch Assignments (`/users` — Fleet Owner Only)**:
+   - Invite Hub Managers via email/phone and assign them to specific hub branches.
+3. **Lorry Receipt (LR) Creation Flow (`/lorry-receipts/new` — Hub Manager / Fleet Owner)**:
+   - Keyboard-first LR creation form with automatic LR number generation (`{HUB_CODE}-{YYYY}-{6-digit seq}`).
+   - Origin/destination hub selection, consignor/consignee contact details, goods description, weight/packages, freight calculation in paise, and auto-slotting to scheduled trips.
+4. **LR Listing & Status Management (`/lorry-receipts`)**:
+   - Filter by hub, status, search by LR number / consignor.
 
 ---
 
@@ -139,6 +161,7 @@
 | LR number format | `MUM-2025-000123` | CONTEXT.md §13 |
 | Freight pricing v1 | Manual entry | CONTEXT.md §20 |
 | Auth | Supabase JWT claims | CONTEXT.md §12 |
+| RLS Helpers | SECURITY DEFINER on current_tenant_id | Migration 10 |
 | Maps v1 | Google Maps | CONTEXT.md §3 |
 | WhatsApp | WATI (v2) | CONTEXT.md §3 |
 | Supabase region | Dev: us-east-1 / Prod: Mumbai | CONTEXT.md §3 |
@@ -152,4 +175,4 @@
 
 Paste this as your opening message in the next chat:
 
-> "Read CONTEXT.md, AGENTS.md, and PROGRESS.md in the SmartParcel workspace at `/Users/nantha/Documents/Projects/SmartParcel`. Then continue Phase 1 development. Today's task: Implement Hub Management CRUD (/hubs), Vehicle Management CRUD (/vehicles), and Driver Registry (/drivers)."
+> "Read CONTEXT.md, AGENTS.md, and PROGRESS.md in the SmartParcel workspace at `/Users/nantha/Documents/Projects/SmartParcel`. Then continue Phase 1 development. Today's task: Implement Trip Schedule Management (/trip-schedules), User Management & Branch Assignment (/users), and Lorry Receipt Creation (/lorry-receipts/new)."
