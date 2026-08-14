@@ -10,7 +10,7 @@
 **Phase 1 — Foundation & Core Booking (v1 Web Admin)**
 
 ## Current Status
-🟢 **Foundation Complete (Steps 2–7). Ready to build UI features & Auth.**
+🟢 **Foundation & Auth Complete. Ready for Hub & Fleet Management CRUD.**
 
 ---
 
@@ -32,7 +32,7 @@
 - [x] `multi-tenant-rls` — corrected RLS pattern, hub-scoped & anon policies
 - [x] `india-domain-formatting` — phone, vehicle, GSTIN, INR, paise
 - [x] `mobile-offline-first` — Flutter Hive/Riverpod (v2 scope)
-- [x] `automated-ui-verification` — browser sub-agent screenshot/recording
+- [x] `automated-ui-verification` — browser sub-agent screenshot/recording with 2-attempt fail-fast protocol
 - [x] `qa-verification` — full test suite with seed data and completion gate
 - [x] `rbac-auth` — JWT claims, middleware, role guards
 - [x] `lr-state-machine` — transition rules, audit trail, dispatch pattern
@@ -61,10 +61,11 @@
 
 ### Foundation & Infrastructure (Steps 2–7)
 - [x] **Next.js 14 Scaffold**: Next.js 14.2.35 with TypeScript, Tailwind CSS v3, App Router, ESLint
-- [x] **Core Dependencies**: `@supabase/ssr`, `@supabase/supabase-js`, `zod`, `react-hook-form`, `@hookform/resolvers`, `@sentry/nextjs`, `sonner`, `lucide-react`, `tailwindcss-animate`
+- [x] **Core Dependencies**: `@supabase/ssr`, `@supabase/supabase-js`, `zod`, `react-hook-form`, `@hookform/resolvers`, `@sentry/nextjs`, `sonner`, `lucide-react`, `tailwindcss-animate`, `ws`
 - [x] **shadcn/ui Initialized**: Base UI components added (Button, Input, Form, Select, Dialog, Table, Card, Badge, Label, Textarea, Separator, Dropdown-Menu, Sheet, Tabs, Alert, Popover, Command, Toast)
 - [x] **Project Structure & Lib Utilities**:
-  - `lib/supabase/server.ts` & `lib/supabase/client.ts` (typed Supabase clients)
+  - `lib/supabase/server.ts` & `lib/supabase/client.ts` (typed Supabase SSR clients)
+  - `lib/supabase/admin.ts` (server-only admin client with `SUPABASE_SERVICE_ROLE_KEY`)
   - `lib/auth/session.ts` (`getSession`, `requireRole`, `getUserHubIds`)
   - `lib/types/action-result.ts` (`ActionResult<T>` + error helpers)
   - `lib/types/lr.ts` (domain type definitions)
@@ -74,8 +75,8 @@
   - `middleware.ts` (route protection with role checking)
   - `.env.local` configured with local Supabase keys
 - [x] **Supabase Local Dev Running**: Started via Docker, verified healthy
-- [x] **Database Migrations (9 Total with RLS)**:
-  1. `20250101000001_tenants.sql` (tenants table)
+- [x] **Database Migrations (9 Total with RLS & Schema Grants)**:
+  1. `20250101000001_tenants.sql` (tenants table + default schema grants)
   2. `20250101000002_users.sql` (users, user_hub_assignments, RLS helpers `current_tenant_id()`, `current_user_role()`, `current_user_hub_ids()`, `set_user_claims` JWT hook)
   3. `20250101000003_hubs.sql` (hubs, lr_sequences, `generate_lr_number()` function)
   4. `20250101000004_vehicles_drivers.sql` (vehicles, drivers)
@@ -85,42 +86,49 @@
   8. `20250101000008_lr_status_history.sql` (lr_status_history, append-only immutable audit trail)
   9. `20250101000009_collections_pod.sql` (to_pay_collections, proof_of_deliveries)
 - [x] **TypeScript Types**: Generated via `supabase gen types typescript --local > lib/types/supabase.ts`
-- [x] **Validation & Verification**:
-  - `npx tsc --noEmit` passed with 0 errors
-  - `npm run build` passed with successful Next.js production bundle
-  - `supabase db reset` tested and passed cleanly
-- [x] **Git Repository**: Initialized with clean milestone commit
+
+### Milestone 2: Auth, Registration & Protected Dashboard Shell
+- [x] **Auth Validation Schemas**: `lib/validations/auth.ts` (Zod schemas for tenant registration, login, phone OTP)
+- [x] **Database Query Helpers**: `lib/db/tenants.ts` and `lib/db/users.ts`
+- [x] **Auth Services Layer**: `lib/services/auth.ts` (secure self-registration provisioning, session sign-in, and log-out)
+- [x] **Server Actions**: `app/(auth)/register/actions.ts`, `app/(auth)/login/actions.ts`, `app/(dashboard)/actions.ts`
+- [x] **Auth UI Pages**:
+  - `app/page.tsx`: Landing page with hero, value propositions, and session-aware redirects
+  - `app/(auth)/layout.tsx`: Light-theme layout with logistics brand highlights
+  - `app/(auth)/register/page.tsx`: Fleet Owner company registration form with real-time slug preview, Indian mobile phone & GSTIN validation
+  - `app/(auth)/login/page.tsx`: Email/Password authentication form
+- [x] **Protected Dashboard Shell**:
+  - `components/providers/session-provider.tsx`: Client-side role and session context
+  - `components/shared/sidebar-nav.tsx`: Role-aware sidebar navigation
+  - `components/shared/user-nav.tsx`: Header user dropdown menu with initials, role badge, company name, and log-out
+  - `app/(dashboard)/layout.tsx`: Desktop and mobile responsive dashboard shell
+  - `app/(dashboard)/error.tsx`: Root dashboard error boundary with Sentry reporting
+  - `app/(dashboard)/dashboard/loading.tsx`: Skeleton loader
+  - `app/(dashboard)/dashboard/page.tsx`: Operational dashboard with 4 metric cards, recent LR table, and quick setup checklist
+- [x] **Skill Optimization**: Updated `automated-ui-verification` skill with a strict **2-attempt max fail-fast error escalation protocol** to eliminate subagent looping.
+- [x] **Code Quality & Build Verification**:
+  - `npm run lint` — 0 errors, 0 warnings
+  - `npx tsc --noEmit` — 0 errors
+  - `npm run build` — Production build succeeds
+  - Git repository clean with conventional commit history
 
 ---
 
-## 🔲 Phase 1 Build Queue (Post-Foundation)
+## 🔲 Up Next — Session 3 Build Queue
 
-- [x] **Supabase Auth + JWT claims hook configured with login/register flows**
-- [x] **Tenant registration page (fleet_owner sign-up)**
-- [x] **Login page (email/password)**
-- [x] **Dashboard layout (sidebar, top nav, breadcrumbs, role guards)**
-- [x] **Fleet Owner dashboard (metric widgets & setup checklist)**
-- [ ] Hub management CRUD (fleet_owner only)
-- [ ] Vehicle management CRUD (fleet_owner only)
-- [ ] Driver registry CRUD (fleet_owner only)
-- [ ] Trip schedule management (fleet_owner only)
-- [ ] User management — invite Hub Managers (fleet_owner only)
-- [ ] Customer public booking form (`/book/[tenant-slug]`)
-- [ ] Hub Manager dashboard (Pending Requests widget + LR list)
-- [ ] LR creation form (keyboard-first, auto-assigns to trip)
-- [ ] LR listing page (filters: status, date, hub, search)
-- [ ] LR detail + status transition actions
-- [ ] LR thermal print (3-inch) + PDF download
-- [ ] Delivery confirmation form (POD + To-Pay collection)
-- [ ] Trip dispatch page
-
----
-
-## Phase 2 Queue (v2 — Not Started)
-- [ ] Flutter driver app
-- [ ] Live GPS tracking dashboard
-- [ ] WhatsApp notifications via WATI
-- [ ] Customer public tracking page
+1. **Hub Management CRUD (`/hubs` — Fleet Owner Only)**:
+   - Hub listing page with branch cards/table (hub code, name, city, phone, status).
+   - Create Hub modal/form with hub code auto-uppercase validation (e.g. `MUM`, `DEL`).
+   - Edit & deactivate hub actions.
+2. **Vehicle Management CRUD (`/vehicles` — Fleet Owner Only)**:
+   - Truck registry with vehicle type badges (`TRUCK`, `MINI_TRUCK`, `TEMPO`), capacity in tonnes, and default driver assignment.
+   - Vehicle number validation with standard Indian format (`MH 04 AB 1234`).
+3. **Driver Registry CRUD (`/drivers` — Fleet Owner Only)**:
+   - Driver profiles (name, phone, license number, active status).
+4. **Trip Schedule Management (`/trip-schedules` — Fleet Owner Only)**:
+   - Configure recurring routes between hubs (days of week, departure times, assigned vehicle/driver).
+5. **User Management (`/users` — Fleet Owner Only)**:
+   - Invite Hub Managers and assign them to specific hub branches.
 
 ---
 
@@ -140,8 +148,8 @@
 
 ---
 
-## How to Start a New Session
+## How to Start Next Session
 
-Paste this as your opening message in a new chat:
+Paste this as your opening message in the next chat:
 
-> "Read CONTEXT.md, AGENTS.md, and PROGRESS.md in the SmartParcel workspace at `/Users/nantha/Documents/Projects/SmartParcel`. Then continue Phase 1 development. Today's task: [describe what you want to build]."
+> "Read CONTEXT.md, AGENTS.md, and PROGRESS.md in the SmartParcel workspace at `/Users/nantha/Documents/Projects/SmartParcel`. Then continue Phase 1 development. Today's task: Implement Hub Management CRUD (/hubs), Vehicle Management CRUD (/vehicles), and Driver Registry (/drivers)."
