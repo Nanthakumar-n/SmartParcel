@@ -7,7 +7,7 @@ const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIU
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
   realtime: {
-    transport: WebSocket,
+    transport: WebSocket as unknown as typeof globalThis.WebSocket,
   },
 });
 
