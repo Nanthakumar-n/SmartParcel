@@ -1,0 +1,2 @@
+-- Seed file for local development
+-- Seed data will be loaded after migrations during supabase db reset
