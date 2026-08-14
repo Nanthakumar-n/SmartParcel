@@ -14,6 +14,7 @@ The Flutter mobile app, live tracking, public tracking page, WhatsApp notificati
 
 | Situation | Load Skill |
 |---|---|
+| Starting a new session or winding down a day | `session-lifecycle` |
 | Writing any SQL schema, migration, or Supabase function | `multi-tenant-rls` |
 | Writing any form, input field, or validation logic | `india-domain-formatting` |
 | Writing any Flutter code | `mobile-offline-first` |
