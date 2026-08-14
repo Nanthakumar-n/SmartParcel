@@ -1,6 +1,14 @@
 -- =============================================================================
--- Migration 1: tenants table
+-- Migration 1: tenants table & standard schema grants
 -- =============================================================================
+
+-- Grant schema access
+GRANT USAGE ON SCHEMA public TO postgres, anon, authenticated, service_role;
+
+-- Set default privileges for all current and future objects
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO postgres, anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO postgres, anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON ROUTINES TO postgres, anon, authenticated, service_role;
 
 -- =============================================================================
 -- tenants table
@@ -21,6 +29,9 @@ CREATE TABLE public.tenants (
 
 -- Enable RLS
 ALTER TABLE public.tenants ENABLE ROW LEVEL SECURITY;
+
+-- Grant table privileges (RLS policies govern row-level access)
+GRANT ALL ON TABLE public.tenants TO postgres, anon, authenticated, service_role;
 
 -- Index for slug lookups (used by customer booking form)
 CREATE INDEX idx_tenants_slug ON public.tenants(slug);

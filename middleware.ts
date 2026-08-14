@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 
 /** Routes accessible without login */
-const PUBLIC_ROUTES = ['/login', '/register', '/book'];
+const PUBLIC_ROUTES = ['/', '/login', '/register', '/book'];
 
 /** Routes restricted to fleet_owner role */
 const FLEET_OWNER_ONLY = [
@@ -18,7 +18,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Allow public routes
-  if (PUBLIC_ROUTES.some((r) => pathname.startsWith(r))) {
+  if (pathname === '/' || PUBLIC_ROUTES.some((r) => r !== '/' && pathname.startsWith(r))) {
     return NextResponse.next();
   }
 
