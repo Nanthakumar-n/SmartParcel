@@ -95,11 +95,11 @@
 
 ## 🔲 Phase 1 Build Queue (Post-Foundation)
 
-- [ ] Supabase Auth + JWT claims hook configured with login/register flows
-- [ ] Tenant registration page (fleet_owner sign-up)
-- [ ] Login page (email/password + phone OTP)
-- [ ] Dashboard layout (sidebar, top nav, breadcrumbs, role guards)
-- [ ] Fleet Owner dashboard (6 metric widgets)
+- [x] **Supabase Auth + JWT claims hook configured with login/register flows**
+- [x] **Tenant registration page (fleet_owner sign-up)**
+- [x] **Login page (email/password)**
+- [x] **Dashboard layout (sidebar, top nav, breadcrumbs, role guards)**
+- [x] **Fleet Owner dashboard (metric widgets & setup checklist)**
 - [ ] Hub management CRUD (fleet_owner only)
 - [ ] Vehicle management CRUD (fleet_owner only)
 - [ ] Driver registry CRUD (fleet_owner only)
