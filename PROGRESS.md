@@ -10,7 +10,7 @@
 **Phase 1 — Foundation & Core Booking (v1 Web Admin)**
 
 ## Current Status
-🟡 **Pre-build — Environment & Architecture Complete. No code written yet.**
+🟢 **Foundation Complete (Steps 2–7). Ready to build UI features & Auth.**
 
 ---
 
@@ -47,7 +47,7 @@
 - [x] npm 10.8.2
 - [x] nvm 0.40.1
 - [x] Supabase CLI 2.114.0 (binary at `~/.local/bin/supabase`)
-- [x] Docker Desktop (installed at `/Applications/Docker.app` — needs one-time manual launch)
+- [x] Docker Desktop (installed at `/Applications/Docker.app` — running)
 - [x] Vercel CLI 58.10.0
 - [x] Git 2.39.5 ✅
 - [x] Xcode 16.2 ✅
@@ -57,62 +57,48 @@
 
 ---
 
-## 🔲 Up Next — Start Here in Next Session
+## ✅ Completed (Session 2 — 2026-08-13)
 
-### Step 1: Open Docker Desktop
-Before any Supabase work, open `/Applications/Docker.app`, accept terms, and wait for the engine to start (whale icon in menu bar goes steady).
-
-### Step 2: Scaffold Next.js Project
-```bash
-cd /Users/nantha/Documents/Projects/SmartParcel
-npx create-next-app@14.2.x ./ --typescript --tailwind --eslint --app --src-dir=no --import-alias="@/*" --use-npm
-```
-
-### Step 3: Install Core Dependencies
-```bash
-npm install @supabase/ssr@0.5.x @supabase/supabase-js@2.x zod react-hook-form @hookform/resolvers @sentry/nextjs sonner
-npm install -D @types/node
-```
-
-### Step 4: Initialise shadcn/ui
-```bash
-npx shadcn@latest init
-```
-
-### Step 5: Initialise Supabase Local Dev
-```bash
-supabase init
-supabase start   # Docker must be running
-```
-
-### Step 6: Write Database Migrations (in order)
-1. `tenants` + RLS
-2. `users` + JWT claims function + `user_hub_assignments`
-3. `hubs` + RLS + LR sequence tables
-4. `vehicles` + `drivers` + RLS
-5. `trip_schedules` + `trips` + RLS
-6. `booking_requests` + anon RLS
-7. `lorry_receipts` + hub-scoped RLS + LR auto-numbering trigger
-8. `lr_status_history` (append-only, no UPDATE/DELETE policies)
-9. `to_pay_collections` + `proof_of_deliveries` + RLS
-
-### Step 7: Generate TypeScript Types
-```bash
-supabase gen types typescript --local > src/types/supabase.ts
-```
+### Foundation & Infrastructure (Steps 2–7)
+- [x] **Next.js 14 Scaffold**: Next.js 14.2.35 with TypeScript, Tailwind CSS v3, App Router, ESLint
+- [x] **Core Dependencies**: `@supabase/ssr`, `@supabase/supabase-js`, `zod`, `react-hook-form`, `@hookform/resolvers`, `@sentry/nextjs`, `sonner`, `lucide-react`, `tailwindcss-animate`
+- [x] **shadcn/ui Initialized**: Base UI components added (Button, Input, Form, Select, Dialog, Table, Card, Badge, Label, Textarea, Separator, Dropdown-Menu, Sheet, Tabs, Alert, Popover, Command, Toast)
+- [x] **Project Structure & Lib Utilities**:
+  - `lib/supabase/server.ts` & `lib/supabase/client.ts` (typed Supabase clients)
+  - `lib/auth/session.ts` (`getSession`, `requireRole`, `getUserHubIds`)
+  - `lib/types/action-result.ts` (`ActionResult<T>` + error helpers)
+  - `lib/types/lr.ts` (domain type definitions)
+  - `lib/constants/lr-statuses.ts`, `payment-modes.ts`, `pagination.ts`
+  - `lib/utils/format-currency.ts`, `format-phone.ts`, `format-vehicle.ts`, `format-date.ts`
+  - `lib/services/lr-state-machine.ts` (`VALID_TRANSITIONS`, `validateTransition`, `getAvailableTransitions`)
+  - `middleware.ts` (route protection with role checking)
+  - `.env.local` configured with local Supabase keys
+- [x] **Supabase Local Dev Running**: Started via Docker, verified healthy
+- [x] **Database Migrations (9 Total with RLS)**:
+  1. `20250101000001_tenants.sql` (tenants table)
+  2. `20250101000002_users.sql` (users, user_hub_assignments, RLS helpers `current_tenant_id()`, `current_user_role()`, `current_user_hub_ids()`, `set_user_claims` JWT hook)
+  3. `20250101000003_hubs.sql` (hubs, lr_sequences, `generate_lr_number()` function)
+  4. `20250101000004_vehicles_drivers.sql` (vehicles, drivers)
+  5. `20250101000005_trips.sql` (trip_schedules, trips)
+  6. `20250101000006_booking_requests.sql` (booking_requests, anon RLS, `generate_booking_ref()`)
+  7. `20250101000007_lorry_receipts.sql` (lorry_receipts, hub-scoped RLS, auto-numbering trigger)
+  8. `20250101000008_lr_status_history.sql` (lr_status_history, append-only immutable audit trail)
+  9. `20250101000009_collections_pod.sql` (to_pay_collections, proof_of_deliveries)
+- [x] **TypeScript Types**: Generated via `supabase gen types typescript --local > lib/types/supabase.ts`
+- [x] **Validation & Verification**:
+  - `npx tsc --noEmit` passed with 0 errors
+  - `npm run build` passed with successful Next.js production bundle
+  - `supabase db reset` tested and passed cleanly
+- [x] **Git Repository**: Initialized with clean milestone commit
 
 ---
 
-## 🔲 Phase 1 Build Queue (Post-Schema)
+## 🔲 Phase 1 Build Queue (Post-Foundation)
 
-- [ ] Next.js project scaffold + dependencies installed
-- [ ] Supabase local dev running
-- [ ] Database schema + all RLS migrations written
-- [ ] TypeScript types generated from schema
-- [ ] Supabase Auth + JWT claims hook configured
-- [ ] Next.js middleware (route protection) implemented
+- [ ] Supabase Auth + JWT claims hook configured with login/register flows
 - [ ] Tenant registration page (fleet_owner sign-up)
 - [ ] Login page (email/password + phone OTP)
+- [ ] Dashboard layout (sidebar, top nav, breadcrumbs, role guards)
 - [ ] Fleet Owner dashboard (6 metric widgets)
 - [ ] Hub management CRUD (fleet_owner only)
 - [ ] Vehicle management CRUD (fleet_owner only)
