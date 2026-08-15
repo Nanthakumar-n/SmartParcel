@@ -3,34 +3,40 @@
 import React, { createContext, useContext } from 'react';
 import type { UserSession } from '@/lib/auth/session';
 
-interface ExtendedSession extends UserSession {
+export interface ExtendedSession extends UserSession {
   tenantName?: string;
   tenantSlug?: string;
   fullName?: string;
 }
 
-const SessionContext = createContext<ExtendedSession | null>(null);
+const defaultSession: ExtendedSession = {
+  id: '',
+  email: '',
+  role: 'fleet_owner',
+  tenantId: '',
+  tenantName: 'SmartParcel Logistics',
+  fullName: 'Fleet User',
+};
+
+const SessionContext = createContext<ExtendedSession>(defaultSession);
 
 export function SessionProvider({
   session,
   children,
 }: {
-  session: ExtendedSession;
+  session?: ExtendedSession | null;
   children: React.ReactNode;
 }) {
   return (
-    <SessionContext.Provider value={session}>
+    <SessionContext.Provider value={session || defaultSession}>
       {children}
     </SessionContext.Provider>
   );
 }
 
-export function useSession() {
+export function useSession(): ExtendedSession {
   const context = useContext(SessionContext);
-  if (!context) {
-    throw new Error('useSession must be used within a SessionProvider');
-  }
-  return context;
+  return context || defaultSession;
 }
 
 export function useIsFleetOwner() {

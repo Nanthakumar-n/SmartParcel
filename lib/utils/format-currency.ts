@@ -14,6 +14,25 @@ export function paiseToCurrency(paise: number): string {
 }
 
 /**
+ * Format an amount in rupees to Indian Rupee display string.
+ *
+ * @param rupees - Amount in rupees
+ * @returns Formatted string like "₹1,00,000.00"
+ */
+export function formatINR(rupees: number): string {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: 2,
+  }).format(rupees);
+}
+
+/**
+ * Alias for paiseToCurrency
+ */
+export const formatINRFromPaise = paiseToCurrency;
+
+/**
  * Convert a rupee amount to paise for storage.
  *
  * @param rupees - Amount in rupees (e.g., 1500.50)

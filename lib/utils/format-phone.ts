@@ -48,3 +48,8 @@ export function formatPhoneDisplay(phone: string): string {
 
   return `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`;
 }
+
+/**
+ * Alias for formatPhoneDisplay
+ */
+export const formatPhone = formatPhoneDisplay;

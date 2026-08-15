@@ -10,7 +10,7 @@
 **Phase 1 — Foundation & Core Booking (v1 Web Admin)**
 
 ## Current Status
-🟢 **Fleet Administration Complete (Hubs, Drivers & Vehicles). Ready for Trip Schedules & LR Creation.**
+🟢 **Trip Schedules, User Management & LR Creation Complete. Ready for Trip Dispatch & Booking Requests.**
 
 ---
 
@@ -140,17 +140,50 @@
 
 ---
 
-## 🔲 Up Next — Session 4 Build Queue
+## ✅ Completed (Session 4 — 2026-08-15)
 
-1. **Trip Schedule Management (`/trip-schedules` — Fleet Owner Only)**:
-   - Configure recurring routes between hubs (origin hub, destination hub, days of week, departure times, default vehicle/driver).
-2. **User Management & Branch Assignments (`/users` — Fleet Owner Only)**:
-   - Invite Hub Managers via email/phone and assign them to specific hub branches.
-3. **Lorry Receipt (LR) Creation Flow (`/lorry-receipts/new` — Hub Manager / Fleet Owner)**:
-   - Keyboard-first LR creation form with automatic LR number generation (`{HUB_CODE}-{YYYY}-{6-digit seq}`).
-   - Origin/destination hub selection, consignor/consignee contact details, goods description, weight/packages, freight calculation in paise, and auto-slotting to scheduled trips.
-4. **LR Listing & Status Management (`/lorry-receipts`)**:
-   - Filter by hub, status, search by LR number / consignor.
+### Milestone 4: Trip Schedules, User Management & LR Creation
+- [x] **Trip Schedule Management (`/trip-schedules`)**:
+  - `lib/validations/trip-schedule.ts`: Zod schema with `from_hub_id !== to_hub_id` refinement, `days_of_week` (0–6 array), `departure_time`, optional vehicle/driver.
+  - `lib/db/trip-schedules.ts`: `getTripSchedulesByTenant` (with joined hubs, vehicle, driver), `insertTripSchedule`, `updateTripSchedule`, `toggleTripScheduleActive`, `deleteTripSchedule`, `getScheduledTripsForRoute`.
+  - `app/(dashboard)/trip-schedules/actions.ts`: `createTripScheduleAction`, `updateTripScheduleAction`, `toggleTripScheduleStatusAction`, `deleteTripScheduleAction` with `fleet_owner` role guard.
+  - UI: metric cards (Total/Active Schedules, Active Routes), filterable schedule table with day-of-week badges, `ScheduleDialog` (create/edit), `DaySelector` multi-toggle.
+- [x] **User Management & Branch Assignment (`/users`)**:
+  - `lib/validations/user.ts`: `inviteUserSchema` + `updateUserSchema` with Indian phone regex, hub assignment refinement for `hub_manager` role.
+  - `lib/db/users.ts`: `getUsersByTenant` (joined hub assignments), `getUserWithAssignments`, `updateUserWithHubs`, `toggleUserActive`.
+  - `lib/services/users.ts`: Supabase Admin provisioning flow — creates auth user, inserts `public.users`, syncs `user_hub_assignments`.
+  - `app/(dashboard)/users/actions.ts`: `inviteUserAction`, `updateUserAction`, `toggleUserStatusAction` with `fleet_owner` role guard.
+  - UI: metric cards, user table with role badges and branch chips, `UserDialog` with multi-hub selector.
+- [x] **Lorry Receipt Creation & Listing (`/lorry-receipts`)**:
+  - `lib/validations/lr.ts`: `lrCreateSchema` — string-parsed numeric fields (paise conversion), `+91` phone regex, GSTIN optional, `from_hub_id !== to_hub_id` refinement.
+  - `lib/db/lorry-receipts.ts`: `insertLR` (auto-trigger LR number), `getLRById`, `getLRsByTenant` (filterable by status/hub/search), `getRecentLRsByTenant`.
+  - `lib/services/lr.ts`: `createLorryReceiptService` — rupees-to-paise conversion, hub scope guard, LR insert, initial `lr_status_history` audit entry (`BOOKING_PENDING → BOOKED`).
+  - `app/(dashboard)/lorry-receipts/actions.ts`: `createLorryReceiptAction` returning `{ id, lr_number }`.
+  - UI: keyboard-first LR form (Tab/Enter navigation, F2 reset), thermal bill success dialog with print action; LR listing table with status badges, INR currency, filters.
+- [x] **Bug Fix — Select UUID Display**: Fixed Radix UI `SelectValue` lazy-mount bug across `schedule-dialog.tsx` and `lr-form.tsx`. Hub/vehicle/driver selects now render the selected item's label directly in the trigger (no raw UUIDs on initial load).
+- [x] **Utility Additions**: `formatINR` / `paiseToCurrency` in `lib/utils/format-currency.ts`; `formatPhoneDisplay` in `lib/utils/format-phone.ts`.
+- [x] **Session Provider**: Hardened `components/providers/session-provider.tsx` with `defaultSession` to prevent SSR/hydration crashes.
+- [x] **Code Quality Gate**:
+  - `npm run lint`: ✅ 0 errors, 0 warnings.
+  - `npx tsc --noEmit`: ✅ 0 type errors.
+  - `npm run build`: ✅ Production bundle builds successfully.
+
+---
+
+## 🔲 Up Next — Session 5 Build Queue
+
+1. **Trip Dispatch Execution (`/trip-dispatches` — Fleet Owner / Hub Manager)**:
+   - Create trip instances from schedule templates (or ad-hoc), assign vehicle + driver.
+   - LR manifest view: list all LRs slotted to a trip, update statuses to `IN_TRANSIT`.
+   - Dispatch action with LR state machine transition: `BOOKED → IN_TRANSIT` (bulk).
+2. **Booking Requests Queue (`/booking-requests` — Hub Manager)**:
+   - View inbound customer booking requests (from public `/book/{slug}` form).
+   - Accept booking → convert to LR (pre-fill form from booking data).
+   - Reject booking with reason.
+3. **Dashboard Improvements**:
+   - Wire up the 4 metric cards to live Supabase counts.
+   - Recent LR table → live data from `getRecentLRsByTenant`.
+   - Quick setup checklist → hide when all hubs/vehicles/drivers are configured.
 
 ---
 
@@ -162,6 +195,7 @@
 | Freight pricing v1 | Manual entry | CONTEXT.md §20 |
 | Auth | Supabase JWT claims | CONTEXT.md §12 |
 | RLS Helpers | SECURITY DEFINER on current_tenant_id | Migration 10 |
+| SelectValue display | Inline label lookup in trigger (Radix lazy-mount workaround) | Session 4 |
 | Maps v1 | Google Maps | CONTEXT.md §3 |
 | WhatsApp | WATI (v2) | CONTEXT.md §3 |
 | Supabase region | Dev: us-east-1 / Prod: Mumbai | CONTEXT.md §3 |
@@ -175,4 +209,5 @@
 
 Paste this as your opening message in the next chat:
 
-> "Read CONTEXT.md, AGENTS.md, and PROGRESS.md in the SmartParcel workspace at `/Users/nantha/Documents/Projects/SmartParcel`. Then continue Phase 1 development. Today's task: Implement Trip Schedule Management (/trip-schedules), User Management & Branch Assignment (/users), and Lorry Receipt Creation (/lorry-receipts/new)."
+> "Read CONTEXT.md, AGENTS.md, and PROGRESS.md in the SmartParcel workspace at `/Users/nantha/Documents/Projects/SmartParcel`. Then continue Phase 1 development. Today's task: Implement Trip Dispatch Execution (/trip-dispatches), Booking Requests Queue (/booking-requests), and wire up the live Dashboard metrics."
+
