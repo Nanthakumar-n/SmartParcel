@@ -27,12 +27,7 @@ export const customerBookingSchema = z.object({
     .trim()
     .min(2, 'Goods description must be at least 2 characters')
     .max(255, 'Description is too long'),
-  quantity: z
-    .string()
-    .trim()
-    .refine((v) => !isNaN(Number(v)) && Number(v) >= 1 && Number.isInteger(Number(v)), {
-      message: 'Quantity must be a positive integer',
-    }),
+
   weight_kg: z
     .string()
     .trim()

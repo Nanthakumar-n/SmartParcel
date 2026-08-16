@@ -42,7 +42,6 @@ export function BookingFormClient({ companyName, tenantSlug }: BookingFormClient
       origin_city: '',
       destination_city: '',
       goods_description: '',
-      quantity: '1',
       weight_kg: '',
       num_packages: '1',
     },
@@ -240,28 +239,10 @@ export function BookingFormClient({ companyName, tenantSlug }: BookingFormClient
               )}
             </div>
 
-            <div className="grid grid-cols-3 gap-2">
-              <div className="space-y-1">
-                <Label htmlFor="quantity" className="text-xs font-semibold text-slate-700">
-                  Total Qty <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="quantity"
-                  type="number"
-                  {...register('quantity')}
-                  disabled={isSubmitting}
-                  className="text-xs h-9"
-                />
-                {errors.quantity && (
-                  <p className="text-[11px] text-red-500 font-medium">
-                    {errors.quantity.message}
-                  </p>
-                )}
-              </div>
-
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label htmlFor="weight_kg" className="text-xs font-semibold text-slate-700">
-                  Weight (kg)
+                  Total Weight (kg)
                 </Label>
                 <Input
                   id="weight_kg"
@@ -279,7 +260,7 @@ export function BookingFormClient({ companyName, tenantSlug }: BookingFormClient
 
               <div className="space-y-1">
                 <Label htmlFor="num_packages" className="text-xs font-semibold text-slate-700">
-                  Packages <span className="text-red-500">*</span>
+                  No. of Packages <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="num_packages"

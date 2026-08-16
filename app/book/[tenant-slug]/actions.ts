@@ -37,7 +37,6 @@ export async function submitBookingRequestAction(
     // 2. Normalize customer phone number
     const normalizedPhone = normalizePhone(parsed.data.customer_phone);
 
-    const qty = parseInt(parsed.data.quantity, 10) || 1;
     const pkgs = parseInt(parsed.data.num_packages, 10) || 1;
     const weight =
       parsed.data.weight_kg && parsed.data.weight_kg.trim() !== ''
@@ -56,7 +55,7 @@ export async function submitBookingRequestAction(
       origin_city: parsed.data.origin_city.trim(),
       destination_city: parsed.data.destination_city.trim(),
       goods_description: parsed.data.goods_description.trim(),
-      quantity: qty,
+      quantity: pkgs,
       weight_kg: weight,
       num_packages: pkgs,
       status: 'PENDING',
