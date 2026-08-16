@@ -7,7 +7,17 @@ export const lrCreateSchema = z
   .object({
     booking_date: z
       .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, 'Please enter a valid date (YYYY-MM-DD)'),
+      .regex(/^\d{4}-\d{2}-\d{2}$/, 'Please enter a valid date (YYYY-MM-DD)')
+      .refine((val) => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const [y, m, d] = val.split('-').map(Number);
+        const inputDate = new Date(y, m - 1, d);
+        inputDate.setHours(0, 0, 0, 0);
+        return inputDate >= today;
+      }, {
+        message: 'Booking date cannot be in the past',
+      }),
     from_hub_id: z.string().uuid('Please select an origin hub'),
     to_hub_id: z.string().uuid('Please select a destination hub'),
     trip_id: z.string().uuid().optional().or(z.literal('')),
@@ -133,6 +143,19 @@ export const lrCreateSchema = z
   .refine((data) => data.from_hub_id !== data.to_hub_id, {
     message: 'Origin and Destination hubs cannot be the same',
     path: ['to_hub_id'],
+  })
+  .refine((data) => {
+    if (!data.expected_delivery_date || data.expected_delivery_date.trim() === '') return true;
+    const [by, bm, bd] = data.booking_date.split('-').map(Number);
+    const [ey, em, ed] = data.expected_delivery_date.split('-').map(Number);
+    const bDate = new Date(by, bm - 1, bd);
+    const eDate = new Date(ey, em - 1, ed);
+    bDate.setHours(0, 0, 0, 0);
+    eDate.setHours(0, 0, 0, 0);
+    return eDate >= bDate;
+  }, {
+    message: 'Expected delivery date cannot be before the booking date',
+    path: ['expected_delivery_date'],
   });
 
 export type LRCreateInput = z.infer<typeof lrCreateSchema>;
