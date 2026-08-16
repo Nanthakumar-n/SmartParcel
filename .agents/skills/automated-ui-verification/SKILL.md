@@ -9,6 +9,37 @@ Every frontend feature or dashboard page must be visually verified using the bro
 
 ---
 
+## 🧹 Dev Server Lifecycle & Cache Conflict Prevention (Critical)
+
+In Next.js, running `npm run build` overwrites the `.next/` directory with production chunk manifests. Running `npm run dev` concurrently or immediately afterwards without a clean cache reset causes webpack hot-reloading chunk collisions, leading to **404 errors on development stylesheets** (`_next/static/css/app/layout.css`) and unstyled HTML.
+
+### Safe Dev Server Launch Protocol:
+1. **Ensure Port 3000 is Dedicated**:
+   ```bash
+   kill -9 $(lsof -ti :3000) 2>/dev/null || true
+   ```
+2. **Flush Build Cache (if `npm run build` was run earlier)**:
+   ```bash
+   rm -rf .next
+   ```
+3. **Start Dev Server in Background**:
+   ```bash
+   npm run dev
+   ```
+4. **Health Check Before Browser Navigation**:
+   ```bash
+   curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/login
+   # Ensure it returns 200 OK
+   ```
+
+### Immediate Auto-Remediation on Broken/Unstyled UI:
+If the browser sub-agent captures unstyled HTML or encounters a `404` for `layout.css`:
+- **Stop**: Do not attempt repetitive form submissions.
+- **Remediate**: Kill node on port 3000 → `rm -rf .next` → restart `npm run dev`.
+- **Rerun**: Re-execute the browser verification pass.
+
+---
+
 ## ⚠️ Anti-Looping & Error Handling Protocol (Critical)
 
 To prevent the browser subagent from getting stuck in repetitive retry loops when an error occurs:
@@ -38,13 +69,11 @@ Activate this skill after completing any of the following:
 
 ### Verification Steps
 
-1. **Start the dev server** (if not already running):
-   ```bash
-   npm run dev
-   ```
+1. **Prepare the dev server** following the *Safe Dev Server Launch Protocol* above.
 
 2. **Spin up the browser sub-agent** using the `browser_subagent` tool with clear, finite instructions:
    - Navigate to the target page URL (e.g., `http://localhost:3000/dashboard`).
+   - **Verify CSS integrity**: Confirm styles, colors, and layout are rendered (not unstyled HTML).
    - Capture a **desktop screenshot** at viewport `1440 x 900`.
    - Resize to **mobile viewport** `375 x 812` and capture another screenshot.
    - Interact with key UI elements (open forms, fill fields, submit).
@@ -57,6 +86,10 @@ Activate this skill after completing any of the following:
    - Session recording (if interactions were performed).
 
 4. **Verify the following checklist** from the screenshots/recording:
+
+   #### Style & CSS Integrity
+   - [ ] Tailwind CSS loaded cleanly (no unstyled plain HTML, no 404 on `layout.css`).
+   - [ ] Typography, badges, card borders, and brand colors render with correct visual hierarchy.
 
    #### Layout & Responsiveness
    - [ ] No horizontal scroll on mobile (`375px` width).
@@ -81,9 +114,10 @@ Activate this skill after completing any of the following:
 ### Standard Browser Sub-Agent Task Prompt Template
 ```
 Navigate to http://localhost:3000/<page>.
-1. Viewport: Set to desktop 1440x900 and capture screenshot.
-2. Viewport: Set to mobile 375x812 and capture screenshot.
-3. Perform the requested interaction (e.g. fill form and submit).
-4. FAIL-FAST RULE: If any error message appears or submission fails, retry at most 2 times. If it fails on the 2nd try, stop immediately, take a screenshot of the error, and return the error text. Do not continue trying.
-5. On success: verify expected destination page elements and return confirmation.
+1. Verify CSS & styling: Ensure the page is styled with Tailwind CSS (not raw unstyled HTML).
+2. Viewport: Set to desktop 1440x900 and capture screenshot.
+3. Viewport: Set to mobile 375x812 and capture screenshot.
+4. Perform the requested interaction (e.g. fill form and submit).
+5. FAIL-FAST RULE: If any error message appears or submission fails, retry at most 2 times. If it fails on the 2nd try, stop immediately, take a screenshot of the error, and return the error text. Do not continue trying.
+6. On success: verify expected destination page elements and return confirmation.
 ```
