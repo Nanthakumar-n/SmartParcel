@@ -10,11 +10,74 @@
 **Phase 1 — Foundation & Core Booking (v1 Web Admin)**
 
 ## Current Status
-🟢 **Trip Schedules, User Management & LR Creation Complete. Ready for Trip Dispatch & Booking Requests.**
+🟢 **Live Dashboard Metrics, Trip Dispatches & LR Lifecycle Operations Complete. Ready for POD & Collections.**
 
 ---
 
-## ✅ Completed (Session 1 — 2026-08-12)
+## ✅ Completed (Session 6 — 2026-08-16)
+
+### Milestone 6: Live Dashboard Metrics Wiring & Dynamic Operations Overview
+- [x] **Database Aggregates & Metrics Layer (`lib/db/dashboard.ts`)**:
+  - `getDashboardMetrics(supabase)`: Parallel aggregation for active LRs, in-transit LRs, delivered LRs, pending customer web bookings, active fleet vehicles, vehicles in transit, operational branch hubs, active drivers, active trips, and current calendar month freight receivables in paise.
+  - Dynamic onboarding status evaluator: computes setup state across workspace, branch hubs, fleet vehicles, and registered drivers.
+- [x] **Recent LRs Query Helper (`lib/db/lorry-receipts.ts`)**:
+  - `getRecentLRsByTenant(supabase, limit = 5)`: Full relationship hydration with origin hub, destination hub, trip assignment, vehicle, driver, and creator.
+- [x] **Dashboard UI Components (`app/(dashboard)/dashboard/_components/`)**:
+  - `DashboardMetricCards`: 4 live metric cards (Active Consignments with pipeline stats, Pending Web Bookings with action badge, Active Fleet with on-road counts, Monthly Freight Revenue formatted in INR from paise).
+  - `RecentLRsTable`: Live consignment table with route corridor badges, consignor/consignee contact details, cargo summaries, INR freight amounts, status badges, empty state with CTA, and 3-inch thermal bill dialog integration.
+  - `SetupChecklist`: Dynamic onboarding progress bar and status checks that guide initial setup when assets are missing.
+  - `OperationsOverview`: Rendered dynamically in place of the onboarding checklist when hubs, vehicles, and drivers are registered. Features rapid action shortcuts, fleet network status, and driver pulse.
+- [x] **Dashboard Page & Skeleton (`app/(dashboard)/dashboard/`)**:
+  - `page.tsx`: Server component with role guard (`requireRole(['fleet_owner', 'hub_manager'])`), parallel data fetching, and dynamic layout.
+  - `loading.tsx`: Clean skeleton loader matching the card grid and table layout.
+- [x] **Code Quality & Build Verification Gate**:
+  - `npx tsc --noEmit`: ✅ 0 type errors.
+  - `npm run lint`: ✅ 0 warnings, 0 errors.
+  - `npm run build`: ✅ All 17 routes compiled successfully.
+- [x] **Automated Browser Subagent Verification**:
+  - Verified live dashboard metrics and recent LRs table on desktop viewport (1440×900).
+  - Verified thermal bill modal dialog for waybill receipts.
+  - Verified dynamic hiding of onboarding checklist and display of Operations Overview.
+  - Verified mobile responsiveness (375×812) with zero horizontal overflow.
+
+---
+
+## 🔲 Up Next — Session 7 Build Queue
+
+1. **Proof of Delivery (POD) & Delivery Confirmation Workflow**:
+   - Destination Hub Manager marking LR as `ARRIVED` -> `OUT_FOR_DELIVERY` -> `DELIVERED`.
+   - Capturing receiver name, delivery timestamp, and remarks into `proof_of_deliveries` table.
+2. **To-Pay Freight Collections Workflow**:
+   - For `TO_PAY` payment mode LRs, recording cash/UPI/bank transfer collection into `to_pay_collections` table upon delivery confirmation.
+
+---
+
+## Key Decisions Log
+| Decision | Choice | Reference |
+|---|---|---|
+| Trip model | 1 trip = many LRs | CONTEXT.md §7 |
+| LR number format | `MUM-2025-000123` | CONTEXT.md §13 |
+| Freight pricing v1 | Manual entry | CONTEXT.md §20 |
+| Auth | Supabase JWT claims | CONTEXT.md §12 |
+| RLS Helpers | SECURITY DEFINER on current_tenant_id | Migration 10 |
+| SelectValue display | Inline label lookup in trigger (Radix lazy-mount workaround) | Session 4 |
+| Dashboard aggregates | Dedicated `getDashboardMetrics` parallel query helper | Session 6 |
+| Dynamic onboarding | Hide checklist once hubs, vehicles, drivers > 0; show Operations Overview | Session 6 |
+| Maps v1 | Google Maps | CONTEXT.md §3 |
+| WhatsApp | WATI (v2) | CONTEXT.md §3 |
+| Supabase region | Dev: us-east-1 / Prod: Mumbai | CONTEXT.md §3 |
+| Theme | Light theme | CONTEXT.md §3 |
+| Node version | v20 LTS | REQUIREMENTS.md |
+| Next.js version | 14.2.x | REQUIREMENTS.md |
+
+---
+
+## How to Start Next Session
+
+Paste this as your opening message in the next chat:
+
+> "Read CONTEXT.md, AGENTS.md, and PROGRESS.md in the SmartParcel workspace at `/Users/nantha/Documents/Projects/SmartParcel`. Then continue Phase 1 development. Today's task: Implement Proof of Delivery (POD) & To-Pay Collections Workflow (/lorry-receipts delivery confirmation)."
+
 
 ### Architecture & Planning
 - [x] Full project context documented in `CONTEXT.md` (20 sections)
