@@ -170,20 +170,29 @@
 
 ---
 
-## 🔲 Up Next — Session 5 Build Queue
+## ✅ Completed (Session 5 — 2026-08-16)
 
-1. **Trip Dispatch Execution (`/trip-dispatches` — Fleet Owner / Hub Manager)**:
-   - Create trip instances from schedule templates (or ad-hoc), assign vehicle + driver.
-   - LR manifest view: list all LRs slotted to a trip, update statuses to `IN_TRANSIT`.
-   - Dispatch action with LR state machine transition: `BOOKED → IN_TRANSIT` (bulk).
-2. **Booking Requests Queue (`/booking-requests` — Hub Manager)**:
-   - View inbound customer booking requests (from public `/book/{slug}` form).
-   - Accept booking → convert to LR (pre-fill form from booking data).
-   - Reject booking with reason.
-3. **Dashboard Improvements**:
+### Milestone 5: Trip Dispatches & Booking Requests Queue
+- [x] **Trip Dispatch Execution (`/trip-dispatches`)**:
+  - `lib/db/trips.ts`: Pure database query helpers to fetch and list trip manifests.
+  - `app/(dashboard)/trip-dispatches/actions.ts`: `createTripAction`, `loadLRAction` (single cargo assignment), `loadAllLRsAction` (bulk slotting), and atomic `dispatchTripAction` (`SCHEDULED -> IN_TRANSIT` & slotted LRs `PICKED_UP -> IN_TRANSIT`).
+  - UI: Metric cards showing transit summary counts; filterable trip list table; manifest side-drawer sheet panel with status logs.
+- [x] **Booking Requests Queue (`/booking-requests`) & Public Customer Booking Form (`/book/[tenant-slug]`)**:
+  - `app/book/[tenant-slug]`: Public customer-facing page with lightweight card style, validations, and submission action creating booking requests (`PENDING`).
+  - `app/(dashboard)/booking-requests`: Dashboard queue page with custom filters (Pending, Accepted, Rejected), search, rejection dialog details, and redirect links.
+  - Prefilled Waybill digitization: clicking "Accept" redirects to `/lorry-receipts/new?booking_id=...` and automatically populates consignor details and performs city-to-hub fuzzy matches.
+- [x] **Code Quality & Build Verification Gate**:
+  - `npx tsc --noEmit`: ✅ 0 type errors.
+  - `npm run lint`: ✅ 0 warnings, 0 errors.
+
+---
+
+## 🔲 Up Next — Session 6 Build Queue
+
+1. **Dashboard Improvements**:
    - Wire up the 4 metric cards to live Supabase counts.
-   - Recent LR table → live data from `getRecentLRsByTenant`.
-   - Quick setup checklist → hide when all hubs/vehicles/drivers are configured.
+   - Recent LR table -> live data from `getRecentLRsByTenant`.
+   - Quick setup checklist -> hide when all hubs/vehicles/drivers are configured.
 
 ---
 
@@ -209,5 +218,4 @@
 
 Paste this as your opening message in the next chat:
 
-> "Read CONTEXT.md, AGENTS.md, and PROGRESS.md in the SmartParcel workspace at `/Users/nantha/Documents/Projects/SmartParcel`. Then continue Phase 1 development. Today's task: Implement Trip Dispatch Execution (/trip-dispatches), Booking Requests Queue (/booking-requests), and wire up the live Dashboard metrics."
-
+> "Read CONTEXT.md, AGENTS.md, and PROGRESS.md in the SmartParcel workspace at `/Users/nantha/Documents/Projects/SmartParcel`. Then continue Phase 1 development. Today's task: Implement Live Dashboard Metrics Wiring (/dashboard)."

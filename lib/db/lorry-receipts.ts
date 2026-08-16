@@ -310,3 +310,42 @@ export async function getActiveTripsForRoute(
 
   return data ?? [];
 }
+
+/**
+ * Update the status of a Lorry Receipt.
+ */
+export async function updateLRStatus(
+  supabase: AnySupabaseClient,
+  id: string,
+  status: LRStatus
+): Promise<LRRow> {
+  const { data, error } = await supabase
+    .from('lorry_receipts')
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Update the trip assignment of a Lorry Receipt.
+ */
+export async function updateLRTrip(
+  supabase: AnySupabaseClient,
+  id: string,
+  tripId: string | null
+): Promise<LRRow> {
+  const { data, error } = await supabase
+    .from('lorry_receipts')
+    .update({ trip_id: tripId, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+

@@ -11,6 +11,7 @@ export const lrCreateSchema = z
     from_hub_id: z.string().uuid('Please select an origin hub'),
     to_hub_id: z.string().uuid('Please select a destination hub'),
     trip_id: z.string().uuid().optional().or(z.literal('')),
+    booking_request_id: z.string().uuid().optional().or(z.literal('')),
 
     // Consignor (Sender)
     consignor_name: z

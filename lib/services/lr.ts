@@ -46,10 +46,12 @@ export async function createLRService(
   const numPackages = parseInt(input.num_packages, 10) || 1;
 
   try {
+    const isBookingRequest = !!input.booking_request_id;
+
     // 4. Insert LR into database (trigger automatically generates lr_number)
     const newLR = await insertLR(supabase, {
       booking_date: input.booking_date,
-      source: 'HUB_DIRECT',
+      source: isBookingRequest ? 'CUSTOMER_REQUEST' : 'HUB_DIRECT',
       from_hub_id: input.from_hub_id,
       to_hub_id: input.to_hub_id,
       trip_id: input.trip_id || null,
@@ -67,6 +69,7 @@ export async function createLRService(
       payment_mode: input.payment_mode,
       expected_delivery_date: input.expected_delivery_date || null,
       status: 'BOOKED',
+      booking_request_id: input.booking_request_id || null,
       tenant_id: session.tenantId,
       created_by: session.id,
     });
@@ -74,13 +77,33 @@ export async function createLRService(
     // 5. Append initial transition audit trail in lr_status_history
     await supabase.from('lr_status_history').insert({
       lr_id: newLR.id,
-      from_status: 'BOOKING_PENDING',
+      from_status: isBookingRequest ? 'BOOKING_PENDING' : 'BOOKING_PENDING',
       to_status: 'BOOKED',
       changed_by: session.id,
       changed_at: new Date().toISOString(),
-      notes: 'Direct LR issued at origin hub',
+      notes: isBookingRequest
+        ? `Accepted online booking request ${input.booking_request_id}`
+        : 'Direct LR issued at origin hub',
       tenant_id: session.tenantId,
     });
+
+    // 6. Update the booking request status and link it to the LR
+    if (isBookingRequest) {
+      const { error: bookingUpdateError } = await supabase
+        .from('booking_requests')
+        .update({
+          status: 'ACCEPTED',
+          lr_id: newLR.id,
+          processed_by: session.id,
+          processed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', input.booking_request_id!);
+
+      if (bookingUpdateError) {
+        throw new Error(`Failed to update booking request status: ${bookingUpdateError.message}`);
+      }
+    }
 
     return actionSuccess({
       id: newLR.id,

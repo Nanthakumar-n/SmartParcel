@@ -61,6 +61,17 @@ interface LRFormProps {
       phone: string;
     } | null;
   }[];
+  prefilledBooking?: {
+    id: string;
+    consignor_name: string;
+    consignor_phone: string;
+    from_hub_id: string;
+    to_hub_id: string;
+    goods_description: string;
+    quantity: string;
+    weight_kg: string;
+    num_packages: string;
+  } | null;
 }
 
 export function LRForm({
@@ -68,6 +79,7 @@ export function LRForm({
   userAssignedHubIds,
   userRole,
   availableTrips,
+  prefilledBooking,
 }: LRFormProps) {
   const router = useRouter();
 
@@ -100,22 +112,23 @@ export function LRForm({
     resolver: zodResolver(lrCreateSchema),
     defaultValues: {
       booking_date: new Date().toISOString().split('T')[0],
-      from_hub_id: defaultOriginHub,
-      to_hub_id: '',
+      from_hub_id: prefilledBooking?.from_hub_id || defaultOriginHub,
+      to_hub_id: prefilledBooking?.to_hub_id || '',
       trip_id: '',
-      consignor_name: '',
-      consignor_phone: '+91',
+      consignor_name: prefilledBooking?.consignor_name || '',
+      consignor_phone: prefilledBooking?.consignor_phone || '+91',
       consignor_gstin: '',
       consignee_name: '',
       consignee_phone: '+91',
       consignee_gstin: '',
-      goods_description: '',
-      quantity: '1',
-      weight_kg: '',
-      num_packages: '1',
+      goods_description: prefilledBooking?.goods_description || '',
+      quantity: prefilledBooking?.quantity || '1',
+      weight_kg: prefilledBooking?.weight_kg || '',
+      num_packages: prefilledBooking?.num_packages || '1',
       freight_amount_rupees: '0',
       payment_mode: 'PAID',
       expected_delivery_date: '',
+      booking_request_id: prefilledBooking?.id || '',
     },
   });
 

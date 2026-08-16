@@ -44,7 +44,7 @@ export function SidebarNav() {
     },
     {
       title: 'Trip Dispatches',
-      href: '/trips',
+      href: '/trip-dispatches',
       icon: Truck,
     },
     {

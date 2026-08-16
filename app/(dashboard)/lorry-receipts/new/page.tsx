@@ -28,11 +28,17 @@ interface AvailableTrip {
   } | null;
 }
 
-export default async function NewLRPage() {
+import { getBookingRequestById } from '@/lib/db/booking-requests';
+
+export default async function NewLRPage({
+  searchParams,
+}: {
+  searchParams: { booking_id?: string };
+}) {
   const session = await requireRole(['fleet_owner', 'hub_manager']);
   const supabase = createServerClient();
 
-  const [hubsResult, assignedHubIds, tripsResult] = await Promise.all([
+  const [hubsResult, assignedHubIds, tripsResult, bookingRequest] = await Promise.all([
     getHubsByTenant(supabase, { pageSize: 100 }),
     getUserHubIds(session.id),
     supabase
@@ -57,17 +63,43 @@ export default async function NewLRPage() {
       .in('status', ['SCHEDULED'])
       .order('scheduled_departure', { ascending: true })
       .limit(50),
+    searchParams?.booking_id
+      ? getBookingRequestById(supabase, searchParams.booking_id)
+      : Promise.resolve(null),
   ]);
 
   const hubs = hubsResult.data;
   const availableTrips = (tripsResult.data as unknown as AvailableTrip[]) ?? [];
+
+  // Attempt fuzzy matches of cities to auto-select hubs
+  let prefilledBooking = null;
+  if (bookingRequest) {
+    const matchedFromHub = hubs.find(
+      (h) => h.city && h.city.toLowerCase() === bookingRequest.origin_city.toLowerCase()
+    )?.id || '';
+    const matchedToHub = hubs.find(
+      (h) => h.city && h.city.toLowerCase() === bookingRequest.destination_city.toLowerCase()
+    )?.id || '';
+
+    prefilledBooking = {
+      id: bookingRequest.id,
+      consignor_name: bookingRequest.customer_name,
+      consignor_phone: bookingRequest.customer_phone,
+      from_hub_id: matchedFromHub,
+      to_hub_id: matchedToHub,
+      goods_description: bookingRequest.goods_description,
+      quantity: bookingRequest.quantity.toString(),
+      weight_kg: bookingRequest.weight_kg ? bookingRequest.weight_kg.toString() : '',
+      num_packages: bookingRequest.num_packages ? bookingRequest.num_packages.toString() : '1',
+    };
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
         <Link
-          href="/lorry-receipts"
+          href={bookingRequest ? '/booking-requests' : '/lorry-receipts'}
           className="p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
         >
           <ArrowLeft className="h-5 w-5" />
@@ -77,7 +109,9 @@ export default async function NewLRPage() {
             Issue New Lorry Receipt (Builty)
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Complete the waybill details below to issue a digital LR and slot cargo into upcoming trips.
+            {bookingRequest
+              ? `Convert online booking request ${bookingRequest.booking_ref} to a digital Lorry Receipt.`
+              : 'Complete the waybill details below to issue a digital LR and slot cargo into upcoming trips.'}
           </p>
         </div>
       </div>
@@ -88,6 +122,7 @@ export default async function NewLRPage() {
         userAssignedHubIds={assignedHubIds}
         userRole={session.role}
         availableTrips={availableTrips}
+        prefilledBooking={prefilledBooking}
       />
     </div>
   );
