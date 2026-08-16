@@ -5,6 +5,7 @@ import { requireRole } from '@/lib/auth/session';
 import { createServerClient } from '@/lib/supabase/server';
 import { getLRsByTenant } from '@/lib/db/lorry-receipts';
 import { getHubsByTenant } from '@/lib/db/hubs';
+import { getTenantById } from '@/lib/db/tenants';
 import {
   FileText,
   Truck,
@@ -23,16 +24,18 @@ export const metadata: Metadata = {
 };
 
 export default async function LorryReceiptsPage() {
-  await requireRole(['fleet_owner', 'hub_manager']);
+  const session = await requireRole(['fleet_owner', 'hub_manager']);
   const supabase = createServerClient();
 
-  const [lrsResult, hubsResult] = await Promise.all([
+  const [lrsResult, hubsResult, tenant] = await Promise.all([
     getLRsByTenant(supabase, { pageSize: 100 }),
     getHubsByTenant(supabase, { pageSize: 100 }),
+    getTenantById(supabase, session.tenantId),
   ]);
 
   const lrs = lrsResult.data;
   const hubs = hubsResult.data;
+  const tenantName = tenant?.name ?? 'SmartParcel Logistics';
 
   const totalLRs = lrsResult.count;
   const inTransitCount = lrs.filter((l) => l.status === 'IN_TRANSIT').length;
@@ -120,7 +123,7 @@ export default async function LorryReceiptsPage() {
       </div>
 
       {/* LR Table */}
-      <LRTable initialLRs={lrs} hubs={hubs} />
+      <LRTable initialLRs={lrs} hubs={hubs} tenantName={tenantName} />
     </div>
   );
 }

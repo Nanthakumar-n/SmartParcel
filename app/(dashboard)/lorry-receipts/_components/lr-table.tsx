@@ -31,7 +31,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { LRStatusBadge, PaymentModeBadge } from './lr-status-badge';
-import { LRThermalDialog } from './lr-thermal-dialog';
+import { LRStatusActionMenu } from './lr-status-action-menu';
 import { formatINRFromPaise } from '@/lib/utils/format-currency';
 import { formatPhoneDisplay } from '@/lib/utils/format-phone';
 import type { LRDetailed } from '@/lib/db/lorry-receipts';
@@ -40,9 +40,10 @@ import type { HubRow } from '@/lib/db/hubs';
 interface LRTableProps {
   initialLRs: LRDetailed[];
   hubs: HubRow[];
+  tenantName?: string;
 }
 
-export function LRTable({ initialLRs, hubs }: LRTableProps) {
+export function LRTable({ initialLRs, hubs, tenantName }: LRTableProps) {
   const [lrs, setLRs] = useState(initialLRs);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
@@ -370,7 +371,7 @@ export function LRTable({ initialLRs, hubs }: LRTableProps) {
 
                     {/* Actions */}
                     <TableCell className="py-3.5 text-right">
-                      <LRThermalDialog lr={lr} />
+                      <LRStatusActionMenu lr={lr} tenantName={tenantName} />
                     </TableCell>
                   </TableRow>
                 ))
