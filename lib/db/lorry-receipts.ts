@@ -349,3 +349,86 @@ export async function updateLRTrip(
   return data;
 }
 
+/**
+ * Get recent LRs for dashboard with joined hub details.
+ */
+export async function getRecentLRsByTenant(
+  supabase: AnySupabaseClient,
+  limit = 5
+): Promise<LRDetailed[]> {
+  const { data, error } = await supabase
+    .from('lorry_receipts')
+    .select(
+      `
+      id,
+      lr_number,
+      booking_date,
+      source,
+      from_hub_id,
+      to_hub_id,
+      trip_id,
+      consignor_name,
+      consignor_phone,
+      consignor_gstin,
+      consignee_name,
+      consignee_phone,
+      consignee_gstin,
+      goods_description,
+      quantity,
+      weight_kg,
+      num_packages,
+      freight_amount,
+      payment_mode,
+      expected_delivery_date,
+      status,
+      tenant_id,
+      created_by,
+      created_at,
+      updated_at,
+      from_hub:hubs!from_hub_id (
+        id,
+        hub_code,
+        name,
+        city,
+        address_line1,
+        contact_phone
+      ),
+      to_hub:hubs!to_hub_id (
+        id,
+        hub_code,
+        name,
+        city,
+        address_line1,
+        contact_phone
+      ),
+      trip:trips (
+        id,
+        status,
+        scheduled_departure,
+        vehicle:vehicles (
+          registration_number,
+          vehicle_type
+        ),
+        driver:drivers (
+          full_name,
+          phone
+        )
+      ),
+      creator:users!created_by (
+        id,
+        full_name,
+        email
+      )
+    `
+    )
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    throw error;
+  }
+
+  return (data as unknown as LRDetailed[]) ?? [];
+}
+
+
