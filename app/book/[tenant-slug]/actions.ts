@@ -43,6 +43,10 @@ export async function submitBookingRequestAction(
         ? parseFloat(parsed.data.weight_kg)
         : null;
 
+    const consigneePhone = parsed.data.consignee_phone && parsed.data.consignee_phone.trim() !== ''
+      ? normalizePhone(parsed.data.consignee_phone)
+      : null;
+
     // 3. Create booking request record
     const bookingRef = 'BK-' + Math.random().toString(36).substring(2, 10).toUpperCase();
 
@@ -52,6 +56,14 @@ export async function submitBookingRequestAction(
       booking_ref: bookingRef,
       customer_name: parsed.data.customer_name.trim(),
       customer_phone: normalizedPhone,
+      consignee_name: parsed.data.consignee_name?.trim() || null,
+      consignee_phone: consigneePhone,
+      consignor_address_line1: parsed.data.consignor_address_line1?.trim() || null,
+      consignor_address_line2: parsed.data.consignor_address_line2?.trim() || null,
+      consignor_pin_code: parsed.data.consignor_pin_code?.trim() || null,
+      consignee_address_line1: parsed.data.consignee_address_line1?.trim() || null,
+      consignee_address_line2: parsed.data.consignee_address_line2?.trim() || null,
+      consignee_pin_code: parsed.data.consignee_pin_code?.trim() || null,
       origin_city: parsed.data.origin_city.trim(),
       destination_city: parsed.data.destination_city.trim(),
       goods_description: parsed.data.goods_description.trim(),

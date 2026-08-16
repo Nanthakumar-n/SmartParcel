@@ -122,48 +122,185 @@ export function BookingFormClient({ companyName, tenantSlug }: BookingFormClient
       </CardHeader>
       <CardContent className="p-5">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {/* Section 1: Customer Info */}
-          <div className="space-y-3">
-            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-              <User className="h-3.5 w-3.5 text-slate-400" />
-              <span>Contact Information</span>
-            </h3>
+          {/* Section 1: Sender & Receiver Information */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Sender (Consignor) Info */}
+            <div className="space-y-3 bg-slate-50/50 p-4 rounded-lg border border-slate-100">
+              <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5 border-b pb-2">
+                <User className="h-3.5 w-3.5 text-blue-600" />
+                <span>Sender Details (Consignor)</span>
+              </h3>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label htmlFor="customer_name" className="text-xs font-semibold text-slate-700">
-                  Your Full Name <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="customer_name"
-                  placeholder="e.g. Kishore Kumar"
-                  {...register('customer_name')}
-                  disabled={isSubmitting}
-                  className="text-xs h-9"
-                />
-                {errors.customer_name && (
-                  <p className="text-[11px] text-red-500 font-medium">
-                    {errors.customer_name.message}
-                  </p>
-                )}
+              <div className="space-y-2.5">
+                <div className="space-y-1">
+                  <Label htmlFor="customer_name" className="text-xs font-semibold text-slate-700">
+                    Full Name <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="customer_name"
+                    placeholder="e.g. Rajesh Sharma"
+                    {...register('customer_name')}
+                    disabled={isSubmitting}
+                    className="text-xs h-9 bg-white"
+                  />
+                  {errors.customer_name && (
+                    <p className="text-[11px] text-red-500 font-medium">
+                      {errors.customer_name.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="customer_phone" className="text-xs font-semibold text-slate-700">
+                    Mobile Number <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="customer_phone"
+                    placeholder="e.g. +919876543210"
+                    {...register('customer_phone')}
+                    disabled={isSubmitting}
+                    className="text-xs h-9 bg-white"
+                  />
+                  {errors.customer_phone && (
+                    <p className="text-[11px] text-red-500 font-medium">
+                      {errors.customer_phone.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="consignor_address_line1" className="text-xs font-semibold text-slate-700">
+                    Address Line 1 <span className="text-slate-400 font-normal">(Optional)</span>
+                  </Label>
+                  <Input
+                    id="consignor_address_line1"
+                    placeholder="Flat/House No, Building"
+                    {...register('consignor_address_line1')}
+                    disabled={isSubmitting}
+                    className="text-xs h-9 bg-white"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="consignor_address_line2" className="text-xs font-semibold text-slate-700">
+                    Landmark & Area <span className="text-slate-400 font-normal">(Optional)</span>
+                  </Label>
+                  <Input
+                    id="consignor_address_line2"
+                    placeholder="Street, Landmark, Area"
+                    {...register('consignor_address_line2')}
+                    disabled={isSubmitting}
+                    className="text-xs h-9 bg-white"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="consignor_pin_code" className="text-xs font-semibold text-slate-700">
+                    PIN Code <span className="text-slate-400 font-normal">(Optional)</span>
+                  </Label>
+                  <Input
+                    id="consignor_pin_code"
+                    placeholder="6-digit code"
+                    {...register('consignor_pin_code')}
+                    disabled={isSubmitting}
+                    className="text-xs h-9 bg-white"
+                  />
+                  {errors.consignor_pin_code && (
+                    <p className="text-[11px] text-red-500 font-medium">
+                      {errors.consignor_pin_code.message}
+                    </p>
+                  )}
+                </div>
               </div>
+            </div>
 
-              <div className="space-y-1">
-                <Label htmlFor="customer_phone" className="text-xs font-semibold text-slate-700">
-                  Mobile Number <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="customer_phone"
-                  placeholder="e.g. +919876543210"
-                  {...register('customer_phone')}
-                  disabled={isSubmitting}
-                  className="text-xs h-9"
-                />
-                {errors.customer_phone && (
-                  <p className="text-[11px] text-red-500 font-medium">
-                    {errors.customer_phone.message}
-                  </p>
-                )}
+            {/* Receiver (Consignee) Info */}
+            <div className="space-y-3 bg-slate-50/50 p-4 rounded-lg border border-slate-100">
+              <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5 border-b pb-2">
+                <User className="h-3.5 w-3.5 text-emerald-600" />
+                <span>Receiver Details (Consignee)</span>
+              </h3>
+
+              <div className="space-y-2.5">
+                <div className="space-y-1">
+                  <Label htmlFor="consignee_name" className="text-xs font-semibold text-slate-700">
+                    Full Name <span className="text-slate-400 font-normal">(Optional)</span>
+                  </Label>
+                  <Input
+                    id="consignee_name"
+                    placeholder="e.g. Ramesh Patil"
+                    {...register('consignee_name')}
+                    disabled={isSubmitting}
+                    className="text-xs h-9 bg-white"
+                  />
+                  {errors.consignee_name && (
+                    <p className="text-[11px] text-red-500 font-medium">
+                      {errors.consignee_name.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="consignee_phone" className="text-xs font-semibold text-slate-700">
+                    Mobile Number <span className="text-slate-400 font-normal">(Optional)</span>
+                  </Label>
+                  <Input
+                    id="consignee_phone"
+                    placeholder="e.g. +919123456789"
+                    {...register('consignee_phone')}
+                    disabled={isSubmitting}
+                    className="text-xs h-9 bg-white"
+                  />
+                  {errors.consignee_phone && (
+                    <p className="text-[11px] text-red-500 font-medium">
+                      {errors.consignee_phone.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="consignee_address_line1" className="text-xs font-semibold text-slate-700">
+                    Address Line 1 <span className="text-slate-400 font-normal">(Optional)</span>
+                  </Label>
+                  <Input
+                    id="consignee_address_line1"
+                    placeholder="Flat/House No, Building"
+                    {...register('consignee_address_line1')}
+                    disabled={isSubmitting}
+                    className="text-xs h-9 bg-white"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="consignee_address_line2" className="text-xs font-semibold text-slate-700">
+                    Landmark & Area <span className="text-slate-400 font-normal">(Optional)</span>
+                  </Label>
+                  <Input
+                    id="consignee_address_line2"
+                    placeholder="Street, Landmark, Area"
+                    {...register('consignee_address_line2')}
+                    disabled={isSubmitting}
+                    className="text-xs h-9 bg-white"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="consignee_pin_code" className="text-xs font-semibold text-slate-700">
+                    PIN Code <span className="text-slate-400 font-normal">(Optional)</span>
+                  </Label>
+                  <Input
+                    id="consignee_pin_code"
+                    placeholder="6-digit code"
+                    {...register('consignee_pin_code')}
+                    disabled={isSubmitting}
+                    className="text-xs h-9 bg-white"
+                  />
+                  {errors.consignee_pin_code && (
+                    <p className="text-[11px] text-red-500 font-medium">
+                      {errors.consignee_pin_code.message}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           </div>

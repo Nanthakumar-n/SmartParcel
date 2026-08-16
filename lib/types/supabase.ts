@@ -38,6 +38,14 @@ export type Database = {
         Row: {
           assigned_hub_id: string | null
           booking_ref: string
+          consignee_address_line1: string | null
+          consignee_address_line2: string | null
+          consignee_name: string | null
+          consignee_phone: string | null
+          consignee_pin_code: string | null
+          consignor_address_line1: string | null
+          consignor_address_line2: string | null
+          consignor_pin_code: string | null
           created_at: string
           customer_name: string
           customer_phone: string
@@ -61,6 +69,14 @@ export type Database = {
         Insert: {
           assigned_hub_id?: string | null
           booking_ref: string
+          consignee_address_line1?: string | null
+          consignee_address_line2?: string | null
+          consignee_name?: string | null
+          consignee_phone?: string | null
+          consignee_pin_code?: string | null
+          consignor_address_line1?: string | null
+          consignor_address_line2?: string | null
+          consignor_pin_code?: string | null
           created_at?: string
           customer_name: string
           customer_phone: string
@@ -84,6 +100,14 @@ export type Database = {
         Update: {
           assigned_hub_id?: string | null
           booking_ref?: string
+          consignee_address_line1?: string | null
+          consignee_address_line2?: string | null
+          consignee_name?: string | null
+          consignee_phone?: string | null
+          consignee_pin_code?: string | null
+          consignor_address_line1?: string | null
+          consignor_address_line2?: string | null
+          consignor_pin_code?: string | null
           created_at?: string
           customer_name?: string
           customer_phone?: string
@@ -239,12 +263,18 @@ export type Database = {
         Row: {
           booking_date: string
           booking_request_id: string | null
+          consignee_address_line1: string | null
+          consignee_address_line2: string | null
           consignee_gstin: string | null
           consignee_name: string
           consignee_phone: string
+          consignee_pin_code: string | null
+          consignor_address_line1: string | null
+          consignor_address_line2: string | null
           consignor_gstin: string | null
           consignor_name: string
           consignor_phone: string
+          consignor_pin_code: string | null
           created_at: string
           created_by: string | null
           expected_delivery_date: string | null
@@ -267,12 +297,18 @@ export type Database = {
         Insert: {
           booking_date?: string
           booking_request_id?: string | null
+          consignee_address_line1?: string | null
+          consignee_address_line2?: string | null
           consignee_gstin?: string | null
           consignee_name: string
           consignee_phone: string
+          consignee_pin_code?: string | null
+          consignor_address_line1?: string | null
+          consignor_address_line2?: string | null
           consignor_gstin?: string | null
           consignor_name: string
           consignor_phone: string
+          consignor_pin_code?: string | null
           created_at?: string
           created_by?: string | null
           expected_delivery_date?: string | null
@@ -295,12 +331,18 @@ export type Database = {
         Update: {
           booking_date?: string
           booking_request_id?: string | null
+          consignee_address_line1?: string | null
+          consignee_address_line2?: string | null
           consignee_gstin?: string | null
           consignee_name?: string
           consignee_phone?: string
+          consignee_pin_code?: string | null
+          consignor_address_line1?: string | null
+          consignor_address_line2?: string | null
           consignor_gstin?: string | null
           consignor_name?: string
           consignor_phone?: string
+          consignor_pin_code?: string | null
           created_at?: string
           created_by?: string | null
           expected_delivery_date?: string | null

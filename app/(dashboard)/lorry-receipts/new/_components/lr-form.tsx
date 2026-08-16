@@ -65,6 +65,14 @@ interface LRFormProps {
     id: string;
     consignor_name: string;
     consignor_phone: string;
+    consignee_name?: string;
+    consignee_phone?: string;
+    consignor_address_line1?: string;
+    consignor_address_line2?: string;
+    consignor_pin_code?: string;
+    consignee_address_line1?: string;
+    consignee_address_line2?: string;
+    consignee_pin_code?: string;
     from_hub_id: string;
     to_hub_id: string;
     goods_description: string;
@@ -118,9 +126,15 @@ export function LRForm({
       consignor_name: prefilledBooking?.consignor_name || '',
       consignor_phone: prefilledBooking?.consignor_phone || '+91',
       consignor_gstin: '',
-      consignee_name: '',
-      consignee_phone: '+91',
+      consignor_address_line1: prefilledBooking?.consignor_address_line1 || '',
+      consignor_address_line2: prefilledBooking?.consignor_address_line2 || '',
+      consignor_pin_code: prefilledBooking?.consignor_pin_code || '',
+      consignee_name: prefilledBooking?.consignee_name || '',
+      consignee_phone: prefilledBooking?.consignee_phone || '+91',
       consignee_gstin: '',
+      consignee_address_line1: prefilledBooking?.consignee_address_line1 || '',
+      consignee_address_line2: prefilledBooking?.consignee_address_line2 || '',
+      consignee_pin_code: prefilledBooking?.consignee_pin_code || '',
       goods_description: prefilledBooking?.goods_description || '',
       quantity: prefilledBooking?.quantity || '1',
       weight_kg: prefilledBooking?.weight_kg || '',
@@ -164,9 +178,15 @@ export function LRForm({
       consignor_name: '',
       consignor_phone: '+91',
       consignor_gstin: '',
+      consignor_address_line1: '',
+      consignor_address_line2: '',
+      consignor_pin_code: '',
       consignee_name: '',
       consignee_phone: '+91',
       consignee_gstin: '',
+      consignee_address_line1: '',
+      consignee_address_line2: '',
+      consignee_pin_code: '',
       goods_description: '',
       quantity: '1',
       weight_kg: '',
@@ -479,6 +499,50 @@ export function LRForm({
                   </p>
                 )}
               </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="consignor_address_line1" className="text-xs font-semibold text-slate-700">
+                  Address Line 1 (Optional)
+                </Label>
+                <Input
+                  id="consignor_address_line1"
+                  placeholder="Flat/House No, Building"
+                  {...register('consignor_address_line1')}
+                  disabled={isSubmitting}
+                  className="text-xs h-9"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="consignor_address_line2" className="text-xs font-semibold text-slate-700">
+                  Landmark & Area (Optional)
+                </Label>
+                <Input
+                  id="consignor_address_line2"
+                  placeholder="Street, Landmark, Area"
+                  {...register('consignor_address_line2')}
+                  disabled={isSubmitting}
+                  className="text-xs h-9"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="consignor_pin_code" className="text-xs font-semibold text-slate-700">
+                  PIN Code (Optional)
+                </Label>
+                <Input
+                  id="consignor_pin_code"
+                  placeholder="6-digit code"
+                  {...register('consignor_pin_code')}
+                  disabled={isSubmitting}
+                  className="text-xs h-9"
+                />
+                {errors.consignor_pin_code && (
+                  <p className="text-[11px] text-red-500 font-medium">
+                    {errors.consignor_pin_code.message}
+                  </p>
+                )}
+              </div>
             </CardContent>
           </Card>
 
@@ -541,6 +605,50 @@ export function LRForm({
                 {errors.consignee_gstin && (
                   <p className="text-[11px] text-red-500 font-medium">
                     {errors.consignee_gstin.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="consignee_address_line1" className="text-xs font-semibold text-slate-700">
+                  Address Line 1 (Optional)
+                </Label>
+                <Input
+                  id="consignee_address_line1"
+                  placeholder="Flat/House No, Building"
+                  {...register('consignee_address_line1')}
+                  disabled={isSubmitting}
+                  className="text-xs h-9"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="consignee_address_line2" className="text-xs font-semibold text-slate-700">
+                  Landmark & Area (Optional)
+                </Label>
+                <Input
+                  id="consignee_address_line2"
+                  placeholder="Street, Landmark, Area"
+                  {...register('consignee_address_line2')}
+                  disabled={isSubmitting}
+                  className="text-xs h-9"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="consignee_pin_code" className="text-xs font-semibold text-slate-700">
+                  PIN Code (Optional)
+                </Label>
+                <Input
+                  id="consignee_pin_code"
+                  placeholder="6-digit code"
+                  {...register('consignee_pin_code')}
+                  disabled={isSubmitting}
+                  className="text-xs h-9"
+                />
+                {errors.consignee_pin_code && (
+                  <p className="text-[11px] text-red-500 font-medium">
+                    {errors.consignee_pin_code.message}
                   </p>
                 )}
               </div>

@@ -194,19 +194,41 @@ export function BookingRequestsTable({ initialRequests }: BookingRequestsTablePr
                     {req.booking_ref}
                   </TableCell>
                   <TableCell className="text-xs">
-                    <div className="space-y-0.5">
-                      <span className="font-semibold text-slate-900 block">{req.customer_name}</span>
-                      <span className="text-[11px] text-slate-500 flex items-center gap-1">
-                        <Phone className="h-3 w-3 text-slate-400" />
-                        {formatPhoneDisplay(req.customer_phone)}
-                      </span>
+                    <div className="space-y-1">
+                      <div>
+                        <span className="text-[9px] text-blue-600 font-bold uppercase block tracking-wider">Sender</span>
+                        <span className="font-semibold text-slate-900 block">{req.customer_name}</span>
+                        <span className="text-[11px] text-slate-500 flex items-center gap-1">
+                          <Phone className="h-3 w-3 text-slate-400" />
+                          {formatPhoneDisplay(req.customer_phone)}
+                        </span>
+                      </div>
+                      {req.consignee_name && (
+                        <div className="border-t pt-1 mt-1 border-slate-100">
+                          <span className="text-[9px] text-emerald-600 font-bold uppercase block tracking-wider">Receiver</span>
+                          <span className="font-semibold text-slate-900 block">{req.consignee_name}</span>
+                          {req.consignee_phone && (
+                            <span className="text-[11px] text-slate-500 flex items-center gap-1">
+                              <Phone className="h-3 w-3 text-slate-400" />
+                              {formatPhoneDisplay(req.consignee_phone)}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell className="text-xs text-slate-700">
-                    <div className="flex items-center gap-1 font-medium">
-                      <span>{req.origin_city}</span>
-                      <span className="text-slate-400">→</span>
-                      <span>{req.destination_city}</span>
+                    <div className="flex flex-col gap-0.5">
+                      <div className="flex items-center gap-1 font-medium">
+                        <span>{req.origin_city}</span>
+                        <span className="text-slate-400">→</span>
+                        <span>{req.destination_city}</span>
+                      </div>
+                      {(req.consignor_pin_code || req.consignee_pin_code) && (
+                        <span className="text-[10px] text-slate-400 block font-mono">
+                          PINs: {req.consignor_pin_code || 'N/A'} → {req.consignee_pin_code || 'N/A'}
+                        </span>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell className="text-xs max-w-[200px] truncate text-slate-600">

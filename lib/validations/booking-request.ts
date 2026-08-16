@@ -12,6 +12,68 @@ export const customerBookingSchema = z.object({
     .string()
     .trim()
     .regex(INDIA_PHONE_REGEX, 'Enter a valid 10-digit Indian mobile number (+91...)'),
+  
+  // Consignee (Receiver) Info
+  consignee_name: z
+    .string()
+    .trim()
+    .min(2, 'Receiver name must be at least 2 characters')
+    .max(100, 'Receiver name is too long')
+    .optional()
+    .or(z.literal('')),
+  consignee_phone: z
+    .string()
+    .trim()
+    .refine((v) => !v || INDIA_PHONE_REGEX.test(v), {
+      message: 'Enter a valid 10-digit Indian mobile number (+91...)',
+    })
+    .optional()
+    .or(z.literal('')),
+
+  // Sender (Consignor) Address
+  consignor_address_line1: z
+    .string()
+    .trim()
+    .max(150, 'Address is too long')
+    .optional()
+    .or(z.literal('')),
+  consignor_address_line2: z
+    .string()
+    .trim()
+    .max(150, 'Address/Landmark is too long')
+    .optional()
+    .or(z.literal('')),
+  consignor_pin_code: z
+    .string()
+    .trim()
+    .refine((v) => !v || /^\d{6}$/.test(v), {
+      message: 'Enter a valid 6-digit PIN code',
+    })
+    .optional()
+    .or(z.literal('')),
+
+  // Receiver (Consignee) Address
+  consignee_address_line1: z
+    .string()
+    .trim()
+    .max(150, 'Address is too long')
+    .optional()
+    .or(z.literal('')),
+  consignee_address_line2: z
+    .string()
+    .trim()
+    .max(150, 'Address/Landmark is too long')
+    .optional()
+    .or(z.literal('')),
+  consignee_pin_code: z
+    .string()
+    .trim()
+    .refine((v) => !v || /^\d{6}$/.test(v), {
+      message: 'Enter a valid 6-digit PIN code',
+    })
+    .optional()
+    .or(z.literal('')),
+
   origin_city: z
     .string()
     .trim()

@@ -30,6 +30,26 @@ export const lrCreateSchema = z
       .regex(GSTIN_REGEX, 'Enter a valid 15-character GSTIN')
       .optional()
       .or(z.literal('')),
+    consignor_address_line1: z
+      .string()
+      .trim()
+      .max(150, 'Address is too long')
+      .optional()
+      .or(z.literal('')),
+    consignor_address_line2: z
+      .string()
+      .trim()
+      .max(150, 'Address/Landmark is too long')
+      .optional()
+      .or(z.literal('')),
+    consignor_pin_code: z
+      .string()
+      .trim()
+      .refine((v) => !v || /^\d{6}$/.test(v), {
+        message: 'Enter a valid 6-digit PIN code',
+      })
+      .optional()
+      .or(z.literal('')),
 
     // Consignee (Receiver)
     consignee_name: z
@@ -46,6 +66,26 @@ export const lrCreateSchema = z
       .trim()
       .toUpperCase()
       .regex(GSTIN_REGEX, 'Enter a valid 15-character GSTIN')
+      .optional()
+      .or(z.literal('')),
+    consignee_address_line1: z
+      .string()
+      .trim()
+      .max(150, 'Address is too long')
+      .optional()
+      .or(z.literal('')),
+    consignee_address_line2: z
+      .string()
+      .trim()
+      .max(150, 'Address/Landmark is too long')
+      .optional()
+      .or(z.literal('')),
+    consignee_pin_code: z
+      .string()
+      .trim()
+      .refine((v) => !v || /^\d{6}$/.test(v), {
+        message: 'Enter a valid 6-digit PIN code',
+      })
       .optional()
       .or(z.literal('')),
 
