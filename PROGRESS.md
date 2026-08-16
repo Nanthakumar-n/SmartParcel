@@ -10,45 +10,43 @@
 **Phase 1 — Foundation & Core Booking (v1 Web Admin)**
 
 ## Current Status
-🟢 **Live Dashboard Metrics, Trip Dispatches & LR Lifecycle Operations Complete. Ready for POD & Collections.**
+🟢 **Proof of Delivery (POD), To-Pay Collections, and Full LR Lifecycle Complete.**
 
 ---
 
-## ✅ Completed (Session 6 — 2026-08-16)
+## ✅ Completed (Session 7 — 2026-08-16)
 
-### Milestone 6: Live Dashboard Metrics Wiring & Dynamic Operations Overview
-- [x] **Database Aggregates & Metrics Layer (`lib/db/dashboard.ts`)**:
-  - `getDashboardMetrics(supabase)`: Parallel aggregation for active LRs, in-transit LRs, delivered LRs, pending customer web bookings, active fleet vehicles, vehicles in transit, operational branch hubs, active drivers, active trips, and current calendar month freight receivables in paise.
-  - Dynamic onboarding status evaluator: computes setup state across workspace, branch hubs, fleet vehicles, and registered drivers.
-- [x] **Recent LRs Query Helper (`lib/db/lorry-receipts.ts`)**:
-  - `getRecentLRsByTenant(supabase, limit = 5)`: Full relationship hydration with origin hub, destination hub, trip assignment, vehicle, driver, and creator.
-- [x] **Dashboard UI Components (`app/(dashboard)/dashboard/_components/`)**:
-  - `DashboardMetricCards`: 4 live metric cards (Active Consignments with pipeline stats, Pending Web Bookings with action badge, Active Fleet with on-road counts, Monthly Freight Revenue formatted in INR from paise).
-  - `RecentLRsTable`: Live consignment table with route corridor badges, consignor/consignee contact details, cargo summaries, INR freight amounts, status badges, empty state with CTA, and 3-inch thermal bill dialog integration.
-  - `SetupChecklist`: Dynamic onboarding progress bar and status checks that guide initial setup when assets are missing.
-  - `OperationsOverview`: Rendered dynamically in place of the onboarding checklist when hubs, vehicles, and drivers are registered. Features rapid action shortcuts, fleet network status, and driver pulse.
-- [x] **Dashboard Page & Skeleton (`app/(dashboard)/dashboard/`)**:
-  - `page.tsx`: Server component with role guard (`requireRole(['fleet_owner', 'hub_manager'])`), parallel data fetching, and dynamic layout.
-  - `loading.tsx`: Clean skeleton loader matching the card grid and table layout.
+### Milestone 7: Proof of Delivery (POD), To-Pay Collections & Status Actions
+- [x] **Validation Schemas (`lib/validations/delivery.ts`)**:
+  - `deliveryConfirmationSchema`: Zod schema validating receiver name (min 2 chars), delivery timestamp, remarks, and conditional To-Pay collection fields (`amount_collected_rupees`, `collection_payment_mode`, `collected_by`, `collection_notes`).
+  - `lrTransitionSchema`: Status transitions schema for `ARRIVED`, `OUT_FOR_DELIVERY`, and `CANCELLED`.
+- [x] **Database Query Helpers (`lib/db/collections-pod.ts`)**:
+  - `insertPOD(supabase, podData)` & `getPODByLRId(supabase, lrId)` for `proof_of_deliveries` table.
+  - `insertToPayCollection(supabase, collectionData)` & `getToPayCollectionByLRId(supabase, lrId)` for `to_pay_collections` table.
+- [x] **Delivery & Lifecycle Service Layer (`lib/services/delivery.ts`)**:
+  - `confirmDeliveryService`: Enforces `lr-state-machine` transition rules, updates status to `DELIVERED`, creates immutable POD record, records To-Pay collection (in paise) for `TO_PAY` shipments, and logs audit trail in `lr_status_history`.
+  - `transitionLRStatusService`: Enforces hub scope and permissions for `IN_TRANSIT` → `ARRIVED` → `OUT_FOR_DELIVERY` or `CANCELLED`.
+  - `getLRDeliverySummary`: Queries linked POD and To-Pay collections for review.
+- [x] **Server Actions (`app/(dashboard)/lorry-receipts/actions.ts`)**:
+  - `confirmDeliveryAction`, `transitionLRStatusAction`, `getLRDeliveryDetailsAction` with revalidation on `/lorry-receipts`, `/dashboard`, and `/trip-dispatches`.
+- [x] **UI Components (`app/(dashboard)/lorry-receipts/_components/`)**:
+  - `DeliveryDialog`: Modal capturing receiver identification, timestamp, remarks, and amber-highlighted To-Pay freight collection with payment mode selector (`CASH`, `UPI`, `BANK_TRANSFER`).
+  - `PODDetailsDialog`: Read-only receipt viewer displaying receiver name, delivery time, collection amounts, and payment mode badges for completed deliveries.
+  - `LRStatusActionMenu`: Context-aware action menu per table row (Arrival confirmation, Out for Delivery, Confirm Delivery POD, View POD, 3" Thermal bill, Consignment cancellation).
+  - `LRTable`: Integrated `LRStatusActionMenu` across all rows.
 - [x] **Code Quality & Build Verification Gate**:
   - `npx tsc --noEmit`: ✅ 0 type errors.
   - `npm run lint`: ✅ 0 warnings, 0 errors.
   - `npm run build`: ✅ All 17 routes compiled successfully.
-- [x] **Automated Browser Subagent Verification**:
-  - Verified live dashboard metrics and recent LRs table on desktop viewport (1440×900).
-  - Verified thermal bill modal dialog for waybill receipts.
-  - Verified dynamic hiding of onboarding checklist and display of Operations Overview.
-  - Verified mobile responsiveness (375×812) with zero horizontal overflow.
 
 ---
 
-## 🔲 Up Next — Session 7 Build Queue
+## 🔲 Up Next — Session 8 Build Queue
 
-1. **Proof of Delivery (POD) & Delivery Confirmation Workflow**:
-   - Destination Hub Manager marking LR as `ARRIVED` -> `OUT_FOR_DELIVERY` -> `DELIVERED`.
-   - Capturing receiver name, delivery timestamp, and remarks into `proof_of_deliveries` table.
-2. **To-Pay Freight Collections Workflow**:
-   - For `TO_PAY` payment mode LRs, recording cash/UPI/bank transfer collection into `to_pay_collections` table upon delivery confirmation.
+1. **PDF LR Export (`@react-pdf/renderer`)**:
+   - Standard PDF waybill download alongside the existing 3" thermal print bill.
+2. **End-to-End QA Verification**:
+   - Run complete cross-tenant isolation and role-based access checks.
 
 ---
 
