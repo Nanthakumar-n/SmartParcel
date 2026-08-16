@@ -123,7 +123,7 @@ export function BookingFormClient({ companyName, tenantSlug }: BookingFormClient
       <CardContent className="p-5">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* Section 1: Sender & Receiver Information */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Sender (Consignor) Info */}
             <div className="space-y-3 bg-slate-50/50 p-4 rounded-lg border border-slate-100">
               <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5 border-b pb-2">
@@ -170,7 +170,7 @@ export function BookingFormClient({ companyName, tenantSlug }: BookingFormClient
 
                 <div className="space-y-1">
                   <Label htmlFor="consignor_address_line1" className="text-xs font-semibold text-slate-700">
-                    Address Line 1 <span className="text-slate-400 font-normal">(Optional)</span>
+                    Address Line 1
                   </Label>
                   <Input
                     id="consignor_address_line1"
@@ -183,7 +183,7 @@ export function BookingFormClient({ companyName, tenantSlug }: BookingFormClient
 
                 <div className="space-y-1">
                   <Label htmlFor="consignor_address_line2" className="text-xs font-semibold text-slate-700">
-                    Landmark & Area <span className="text-slate-400 font-normal">(Optional)</span>
+                    Landmark & Area
                   </Label>
                   <Input
                     id="consignor_address_line2"
@@ -196,7 +196,7 @@ export function BookingFormClient({ companyName, tenantSlug }: BookingFormClient
 
                 <div className="space-y-1">
                   <Label htmlFor="consignor_pin_code" className="text-xs font-semibold text-slate-700">
-                    PIN Code <span className="text-slate-400 font-normal">(Optional)</span>
+                    PIN Code
                   </Label>
                   <Input
                     id="consignor_pin_code"
@@ -224,7 +224,7 @@ export function BookingFormClient({ companyName, tenantSlug }: BookingFormClient
               <div className="space-y-2.5">
                 <div className="space-y-1">
                   <Label htmlFor="consignee_name" className="text-xs font-semibold text-slate-700">
-                    Full Name <span className="text-slate-400 font-normal">(Optional)</span>
+                    Full Name
                   </Label>
                   <Input
                     id="consignee_name"
@@ -242,7 +242,7 @@ export function BookingFormClient({ companyName, tenantSlug }: BookingFormClient
 
                 <div className="space-y-1">
                   <Label htmlFor="consignee_phone" className="text-xs font-semibold text-slate-700">
-                    Mobile Number <span className="text-slate-400 font-normal">(Optional)</span>
+                    Mobile Number
                   </Label>
                   <Input
                     id="consignee_phone"
@@ -260,7 +260,7 @@ export function BookingFormClient({ companyName, tenantSlug }: BookingFormClient
 
                 <div className="space-y-1">
                   <Label htmlFor="consignee_address_line1" className="text-xs font-semibold text-slate-700">
-                    Address Line 1 <span className="text-slate-400 font-normal">(Optional)</span>
+                    Address Line 1
                   </Label>
                   <Input
                     id="consignee_address_line1"
@@ -273,7 +273,7 @@ export function BookingFormClient({ companyName, tenantSlug }: BookingFormClient
 
                 <div className="space-y-1">
                   <Label htmlFor="consignee_address_line2" className="text-xs font-semibold text-slate-700">
-                    Landmark & Area <span className="text-slate-400 font-normal">(Optional)</span>
+                    Landmark & Area
                   </Label>
                   <Input
                     id="consignee_address_line2"
@@ -286,7 +286,7 @@ export function BookingFormClient({ companyName, tenantSlug }: BookingFormClient
 
                 <div className="space-y-1">
                   <Label htmlFor="consignee_pin_code" className="text-xs font-semibold text-slate-700">
-                    PIN Code <span className="text-slate-400 font-normal">(Optional)</span>
+                    PIN Code
                   </Label>
                   <Input
                     id="consignee_pin_code"

@@ -484,7 +484,7 @@ export function LRForm({
 
               <div className="space-y-1.5">
                 <Label htmlFor="consignor_gstin" className="text-xs font-semibold text-slate-700">
-                  Consignor GSTIN (Optional)
+                  Consignor GSTIN
                 </Label>
                 <Input
                   id="consignor_gstin"
@@ -502,7 +502,7 @@ export function LRForm({
 
               <div className="space-y-1.5">
                 <Label htmlFor="consignor_address_line1" className="text-xs font-semibold text-slate-700">
-                  Address Line 1 (Optional)
+                  Address Line 1
                 </Label>
                 <Input
                   id="consignor_address_line1"
@@ -515,7 +515,7 @@ export function LRForm({
 
               <div className="space-y-1.5">
                 <Label htmlFor="consignor_address_line2" className="text-xs font-semibold text-slate-700">
-                  Landmark & Area (Optional)
+                  Landmark & Area
                 </Label>
                 <Input
                   id="consignor_address_line2"
@@ -528,7 +528,7 @@ export function LRForm({
 
               <div className="space-y-1.5">
                 <Label htmlFor="consignor_pin_code" className="text-xs font-semibold text-slate-700">
-                  PIN Code (Optional)
+                  PIN Code
                 </Label>
                 <Input
                   id="consignor_pin_code"
@@ -593,7 +593,7 @@ export function LRForm({
 
               <div className="space-y-1.5">
                 <Label htmlFor="consignee_gstin" className="text-xs font-semibold text-slate-700">
-                  Consignee GSTIN (Optional)
+                  Consignee GSTIN
                 </Label>
                 <Input
                   id="consignee_gstin"
@@ -611,7 +611,7 @@ export function LRForm({
 
               <div className="space-y-1.5">
                 <Label htmlFor="consignee_address_line1" className="text-xs font-semibold text-slate-700">
-                  Address Line 1 (Optional)
+                  Address Line 1
                 </Label>
                 <Input
                   id="consignee_address_line1"
@@ -624,7 +624,7 @@ export function LRForm({
 
               <div className="space-y-1.5">
                 <Label htmlFor="consignee_address_line2" className="text-xs font-semibold text-slate-700">
-                  Landmark & Area (Optional)
+                  Landmark & Area
                 </Label>
                 <Input
                   id="consignee_address_line2"
@@ -637,7 +637,7 @@ export function LRForm({
 
               <div className="space-y-1.5">
                 <Label htmlFor="consignee_pin_code" className="text-xs font-semibold text-slate-700">
-                  PIN Code (Optional)
+                  PIN Code
                 </Label>
                 <Input
                   id="consignee_pin_code"
