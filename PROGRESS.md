@@ -7,16 +7,16 @@
 ---
 
 ## Current Phase
-**Phase 1 — Foundation & Core Booking (v1 Web Admin)**
+**Phase 1 (v1 MVP Web Admin) — 100% Complete & Verified**
 
 ## Current Status
-🟢 **Proof of Delivery (POD), To-Pay Collections, and Full LR Lifecycle Complete.**
+🟢 **All 18 Phase 1 features built, tested, and verified with zero errors. Ready for Phase 2 (Flutter Driver App & Mobility).**
 
 ---
 
-## ✅ Completed (Session 7 — 2026-08-16)
+## ✅ Completed (Session 7 — 2026-08-17)
 
-### Milestone 7: Proof of Delivery (POD), To-Pay Collections & Status Actions
+### Milestone 7: Proof of Delivery (POD), To-Pay Collections & LR Lifecycle Operations
 - [x] **Validation Schemas (`lib/validations/delivery.ts`)**:
   - `deliveryConfirmationSchema`: Zod schema validating receiver name (min 2 chars), delivery timestamp, remarks, and conditional To-Pay collection fields (`amount_collected_rupees`, `collection_payment_mode`, `collected_by`, `collection_notes`).
   - `lrTransitionSchema`: Status transitions schema for `ARRIVED`, `OUT_FOR_DELIVERY`, and `CANCELLED`.
@@ -28,25 +28,36 @@
   - `transitionLRStatusService`: Enforces hub scope and permissions for `IN_TRANSIT` → `ARRIVED` → `OUT_FOR_DELIVERY` or `CANCELLED`.
   - `getLRDeliverySummary`: Queries linked POD and To-Pay collections for review.
 - [x] **Server Actions (`app/(dashboard)/lorry-receipts/actions.ts`)**:
-  - `confirmDeliveryAction`, `transitionLRStatusAction`, `getLRDeliveryDetailsAction` with revalidation on `/lorry-receipts`, `/dashboard`, and `/trip-dispatches`.
+  - `confirmDeliveryAction`, `transitionLRStatusAction`, `getLRDeliveryDetailsAction` with automatic Next.js cache revalidation across `/lorry-receipts`, `/dashboard`, and `/trip-dispatches`.
 - [x] **UI Components (`app/(dashboard)/lorry-receipts/_components/`)**:
   - `DeliveryDialog`: Modal capturing receiver identification, timestamp, remarks, and amber-highlighted To-Pay freight collection with payment mode selector (`CASH`, `UPI`, `BANK_TRANSFER`).
   - `PODDetailsDialog`: Read-only receipt viewer displaying receiver name, delivery time, collection amounts, and payment mode badges for completed deliveries.
-  - `LRStatusActionMenu`: Context-aware action menu per table row (Arrival confirmation, Out for Delivery, Confirm Delivery POD, View POD, 3" Thermal bill, Consignment cancellation).
+  - `LRStatusActionMenu`: Context-aware action menu per table row (Picked Up, In Transit, Arrival confirmation, Out for Delivery, Confirm Delivery POD, View POD, 3" Thermal bill, Consignment cancellation).
   - `LRTable`: Integrated `LRStatusActionMenu` across all rows.
 - [x] **Code Quality & Build Verification Gate**:
   - `npx tsc --noEmit`: ✅ 0 type errors.
   - `npm run lint`: ✅ 0 warnings, 0 errors.
   - `npm run build`: ✅ All 17 routes compiled successfully.
+- [x] **Automated Browser Subagent Verification**:
+  - Verified full LR state machine lifecycle: `BOOKED` ➔ `PICKED_UP` ➔ `IN_TRANSIT` ➔ `ARRIVED` ➔ `OUT_FOR_DELIVERY` ➔ `DELIVERED`.
+  - Verified Delivery Confirmation modal, receiver name capture, and To-Pay collection receipt generation.
+  - Verified consignment cancellation modal and state transition to `CANCELLED`.
+  - Verified responsive layouts on Desktop (1440×900) and Mobile (375×812) with zero horizontal overflow.
 
 ---
 
-## 🔲 Up Next — Session 8 Build Queue
+## 🔲 Up Next — Phase 2 Scope (Mobility & Customer Visibility)
 
-1. **PDF LR Export (`@react-pdf/renderer`)**:
-   - Standard PDF waybill download alongside the existing 3" thermal print bill.
-2. **End-to-End QA Verification**:
-   - Run complete cross-tenant isolation and role-based access checks.
+1. **Flutter Driver Mobile App (`/apps/driver_app`)**:
+   - Offline-first state management (Riverpod + Hive).
+   - QR code scanning for cargo pickup, loading, and arrival.
+   - Background GPS location pings to Supabase.
+   - Driver delivery photo capture for Proof of Delivery.
+2. **Real-Time Vehicle & Fleet Tracking**:
+   - Google Maps live truck position view for Fleet Owners.
+3. **Customer Public Tracking & WhatsApp Notifications**:
+   - Public tracking link per LR (`/track/[lr_number]`).
+   - WATI WhatsApp API integration for booking confirmation & PDF waybill delivery.
 
 ---
 
@@ -74,7 +85,7 @@
 
 Paste this as your opening message in the next chat:
 
-> "Read CONTEXT.md, AGENTS.md, and PROGRESS.md in the SmartParcel workspace at `/Users/nantha/Documents/Projects/SmartParcel`. Then continue Phase 1 development. Today's task: Implement PDF LR Export (@react-pdf/renderer) & End-to-End QA Verification."
+> "Read CONTEXT.md, AGENTS.md, and PROGRESS.md in the SmartParcel workspace at `/Users/nantha/Documents/Projects/SmartParcel`. All Phase 1 v1 MVP features are complete. Today's task: Kick off Phase 2 development (Flutter Driver Mobile App & Mobility Setup)."
 
 
 ### Architecture & Planning
@@ -248,35 +259,28 @@ Paste this as your opening message in the next chat:
 
 ---
 
-## 🔲 Up Next — Session 6 Build Queue
+## ✅ Completed (Session 6 — 2026-08-16)
 
-1. **Dashboard Improvements**:
-   - Wire up the 4 metric cards to live Supabase counts.
-   - Recent LR table -> live data from `getRecentLRsByTenant`.
-   - Quick setup checklist -> hide when all hubs/vehicles/drivers are configured.
-
----
-
-## Key Decisions Log
-| Decision | Choice | Reference |
-|---|---|---|
-| Trip model | 1 trip = many LRs | CONTEXT.md §7 |
-| LR number format | `MUM-2025-000123` | CONTEXT.md §13 |
-| Freight pricing v1 | Manual entry | CONTEXT.md §20 |
-| Auth | Supabase JWT claims | CONTEXT.md §12 |
-| RLS Helpers | SECURITY DEFINER on current_tenant_id | Migration 10 |
-| SelectValue display | Inline label lookup in trigger (Radix lazy-mount workaround) | Session 4 |
-| Maps v1 | Google Maps | CONTEXT.md §3 |
-| WhatsApp | WATI (v2) | CONTEXT.md §3 |
-| Supabase region | Dev: us-east-1 / Prod: Mumbai | CONTEXT.md §3 |
-| Theme | Light theme | CONTEXT.md §3 |
-| Node version | v20 LTS | REQUIREMENTS.md |
-| Next.js version | 14.2.x | REQUIREMENTS.md |
-
----
-
-## How to Start Next Session
-
-Paste this as your opening message in the next chat:
-
-> "Read CONTEXT.md, AGENTS.md, and PROGRESS.md in the SmartParcel workspace at `/Users/nantha/Documents/Projects/SmartParcel`. Then continue Phase 1 development. Today's task: Implement Live Dashboard Metrics Wiring (/dashboard)."
+### Milestone 6: Live Dashboard Metrics Wiring & Dynamic Operations Overview
+- [x] **Database Aggregates & Metrics Layer (`lib/db/dashboard.ts`)**:
+  - `getDashboardMetrics(supabase)`: Parallel aggregation for active LRs, in-transit LRs, delivered LRs, pending customer web bookings, active fleet vehicles, vehicles in transit, operational branch hubs, active drivers, active trips, and current calendar month freight receivables in paise.
+  - Dynamic onboarding status evaluator: computes setup state across workspace, branch hubs, fleet vehicles, and registered drivers.
+- [x] **Recent LRs Query Helper (`lib/db/lorry-receipts.ts`)**:
+  - `getRecentLRsByTenant(supabase, limit = 5)`: Full relationship hydration with origin hub, destination hub, trip assignment, vehicle, driver, and creator.
+- [x] **Dashboard UI Components (`app/(dashboard)/dashboard/_components/`)**:
+  - `DashboardMetricCards`: 4 live metric cards (Active Consignments with pipeline stats, Pending Web Bookings with action badge, Active Fleet with on-road counts, Monthly Freight Revenue formatted in INR from paise).
+  - `RecentLRsTable`: Live consignment table with route corridor badges, consignor/consignee contact details, cargo summaries, INR freight amounts, status badges, empty state with CTA, and 3-inch thermal bill dialog integration.
+  - `SetupChecklist`: Dynamic onboarding progress bar and status checks that guide initial setup when assets are missing.
+  - `OperationsOverview`: Rendered dynamically in place of the onboarding checklist when hubs, vehicles, and drivers are registered. Features rapid action shortcuts, fleet network status, and driver pulse.
+- [x] **Dashboard Page & Skeleton (`app/(dashboard)/dashboard/`)**:
+  - `page.tsx`: Server component with role guard (`requireRole(['fleet_owner', 'hub_manager'])`), parallel data fetching, and dynamic layout.
+  - `loading.tsx`: Clean skeleton loader matching the card grid and table layout.
+- [x] **Code Quality & Build Verification Gate**:
+  - `npx tsc --noEmit`: ✅ 0 type errors.
+  - `npm run lint`: ✅ 0 warnings, 0 errors.
+  - `npm run build`: ✅ All 17 routes compiled successfully.
+- [x] **Automated Browser Subagent Verification**:
+  - Verified live dashboard metrics and recent LRs table on desktop viewport (1440×900).
+  - Verified thermal bill modal dialog for waybill receipts.
+  - Verified dynamic hiding of onboarding checklist and display of Operations Overview.
+  - Verified mobile responsiveness (375×812) with zero horizontal overflow.
