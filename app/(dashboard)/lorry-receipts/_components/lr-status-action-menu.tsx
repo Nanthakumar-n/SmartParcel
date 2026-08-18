@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -80,7 +81,7 @@ export function LRStatusActionMenu({ lr, tenantName }: LRStatusActionMenuProps) 
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0 text-slate-500 hover:text-slate-900 hover:bg-slate-100"
+              className="h-8 w-8 p-0 text-slate-500 hover:text-slate-900 hover:bg-slate-100 cursor-pointer"
               disabled={isPending}
             >
               {isPending ? (
@@ -94,78 +95,104 @@ export function LRStatusActionMenu({ lr, tenantName }: LRStatusActionMenuProps) 
         />
 
         <DropdownMenuContent align="end" className="w-52 text-xs">
-          <DropdownMenuLabel className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">
-            Consignment Actions
-          </DropdownMenuLabel>
+          <DropdownMenuGroup>
+            <DropdownMenuLabel className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">
+              Consignment Actions
+            </DropdownMenuLabel>
 
-          {/* If IN_TRANSIT -> Confirm Arrival at Destination Hub */}
-          {status === 'IN_TRANSIT' && (
-            <DropdownMenuItem
-              onClick={() => handleStatusTransition('ARRIVED', 'Confirmed receipt at destination hub')}
-              className="text-xs text-purple-700 font-medium focus:text-purple-800 focus:bg-purple-50 gap-2 cursor-pointer"
-            >
-              <MapPin className="h-3.5 w-3.5 text-purple-600" />
-              <span>Confirm Arrival at Hub</span>
-            </DropdownMenuItem>
-          )}
+            {/* If BOOKED -> Mark Picked Up / Loaded */}
+            {status === 'BOOKED' && (
+              <DropdownMenuItem
+                onClick={() => handleStatusTransition('PICKED_UP', 'Consignment loaded and ready for trip')}
+                className="text-xs text-blue-700 font-medium focus:text-blue-800 focus:bg-blue-50 gap-2 cursor-pointer"
+              >
+                <Send className="h-3.5 w-3.5 text-blue-600" />
+                <span>Mark Picked Up / Loaded</span>
+              </DropdownMenuItem>
+            )}
 
-          {/* If ARRIVED -> Mark Out for Delivery */}
-          {status === 'ARRIVED' && (
-            <DropdownMenuItem
-              onClick={() => handleStatusTransition('OUT_FOR_DELIVERY', 'Dispatched for local delivery')}
-              className="text-xs text-orange-700 font-medium focus:text-orange-800 focus:bg-orange-50 gap-2 cursor-pointer"
-            >
-              <Send className="h-3.5 w-3.5 text-orange-600" />
-              <span>Mark Out for Delivery</span>
-            </DropdownMenuItem>
-          )}
+            {/* If PICKED_UP -> Mark In Transit */}
+            {status === 'PICKED_UP' && (
+              <DropdownMenuItem
+                onClick={() => handleStatusTransition('IN_TRANSIT', 'Consignment on road in transit')}
+                className="text-xs text-sky-700 font-medium focus:text-sky-800 focus:bg-sky-50 gap-2 cursor-pointer"
+              >
+                <MapPin className="h-3.5 w-3.5 text-sky-600" />
+                <span>Mark In Transit</span>
+              </DropdownMenuItem>
+            )}
 
-          {/* If ARRIVED or OUT_FOR_DELIVERY -> Confirm Delivery & POD */}
-          {(status === 'ARRIVED' || status === 'OUT_FOR_DELIVERY') && (
-            <DropdownMenuItem
-              onClick={() => setDeliveryDialogOpen(true)}
-              className="text-xs text-emerald-700 font-semibold focus:text-emerald-800 focus:bg-emerald-50 gap-2 cursor-pointer"
-            >
-              <CheckCheck className="h-3.5 w-3.5 text-emerald-600" />
-              <span>Confirm Delivery (POD)</span>
-            </DropdownMenuItem>
-          )}
+            {/* If IN_TRANSIT -> Confirm Arrival at Destination Hub */}
+            {status === 'IN_TRANSIT' && (
+              <DropdownMenuItem
+                onClick={() => handleStatusTransition('ARRIVED', 'Confirmed receipt at destination hub')}
+                className="text-xs text-purple-700 font-medium focus:text-purple-800 focus:bg-purple-50 gap-2 cursor-pointer"
+              >
+                <MapPin className="h-3.5 w-3.5 text-purple-600" />
+                <span>Confirm Arrival at Hub</span>
+              </DropdownMenuItem>
+            )}
 
-          {/* If DELIVERED -> View POD & Receipt */}
-          {status === 'DELIVERED' && (
-            <DropdownMenuItem
-              onClick={() => setPodDetailsOpen(true)}
-              className="text-xs text-emerald-700 font-medium focus:text-emerald-800 focus:bg-emerald-50 gap-2 cursor-pointer"
-            >
-              <FileCheck className="h-3.5 w-3.5 text-emerald-600" />
-              <span>View POD & Receipt</span>
-            </DropdownMenuItem>
-          )}
+            {/* If ARRIVED -> Mark Out for Delivery */}
+            {status === 'ARRIVED' && (
+              <DropdownMenuItem
+                onClick={() => handleStatusTransition('OUT_FOR_DELIVERY', 'Dispatched for local delivery')}
+                className="text-xs text-orange-700 font-medium focus:text-orange-800 focus:bg-orange-50 gap-2 cursor-pointer"
+              >
+                <Send className="h-3.5 w-3.5 text-orange-600" />
+                <span>Mark Out for Delivery</span>
+              </DropdownMenuItem>
+            )}
+
+            {/* If ARRIVED or OUT_FOR_DELIVERY -> Confirm Delivery & POD */}
+            {(status === 'ARRIVED' || status === 'OUT_FOR_DELIVERY') && (
+              <DropdownMenuItem
+                onClick={() => setDeliveryDialogOpen(true)}
+                className="text-xs text-emerald-700 font-semibold focus:text-emerald-800 focus:bg-emerald-50 gap-2 cursor-pointer"
+              >
+                <CheckCheck className="h-3.5 w-3.5 text-emerald-600" />
+                <span>Confirm Delivery (POD)</span>
+              </DropdownMenuItem>
+            )}
+
+            {/* If DELIVERED -> View POD & Receipt */}
+            {status === 'DELIVERED' && (
+              <DropdownMenuItem
+                onClick={() => setPodDetailsOpen(true)}
+                className="text-xs text-emerald-700 font-medium focus:text-emerald-800 focus:bg-emerald-50 gap-2 cursor-pointer"
+              >
+                <FileCheck className="h-3.5 w-3.5 text-emerald-600" />
+                <span>View POD & Receipt</span>
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuGroup>
 
           <DropdownMenuSeparator />
 
-          {/* Print 3" Thermal Bill */}
-          <DropdownMenuItem
-            onClick={() => setThermalDialogOpen(true)}
-            className="text-xs gap-2 cursor-pointer text-slate-700 font-medium"
-          >
-            <Printer className="h-3.5 w-3.5 text-slate-500" />
-            <span>Thermal Bill (3&quot;)</span>
-          </DropdownMenuItem>
+          <DropdownMenuGroup>
+            {/* Print 3" Thermal Bill */}
+            <DropdownMenuItem
+              onClick={() => setThermalDialogOpen(true)}
+              className="text-xs gap-2 cursor-pointer text-slate-700 font-medium"
+            >
+              <Printer className="h-3.5 w-3.5 text-slate-500" />
+              <span>Thermal Bill (3&quot;)</span>
+            </DropdownMenuItem>
 
-          {/* Cancel Consignment (Pre-transit or Fleet Owner) */}
-          {status !== 'DELIVERED' && status !== 'CANCELLED' && (
-            <>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => setCancelDialogOpen(true)}
-                className="text-xs text-rose-600 focus:text-rose-700 focus:bg-rose-50 gap-2 cursor-pointer"
-              >
-                <XCircle className="h-3.5 w-3.5 text-rose-600" />
-                <span>Cancel Consignment</span>
-              </DropdownMenuItem>
-            </>
-          )}
+            {/* Cancel Consignment (Pre-transit or Fleet Owner) */}
+            {status !== 'DELIVERED' && status !== 'CANCELLED' && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => setCancelDialogOpen(true)}
+                  className="text-xs text-rose-600 focus:text-rose-700 focus:bg-rose-50 gap-2 cursor-pointer"
+                >
+                  <XCircle className="h-3.5 w-3.5 text-rose-600" />
+                  <span>Cancel Consignment</span>
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
 
