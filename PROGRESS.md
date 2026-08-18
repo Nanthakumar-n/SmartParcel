@@ -74,7 +74,7 @@
 
 Paste this as your opening message in the next chat:
 
-> "Read CONTEXT.md, AGENTS.md, and PROGRESS.md in the SmartParcel workspace at `/Users/nantha/Documents/Projects/SmartParcel`. Then continue Phase 1 development. Today's task: Implement Proof of Delivery (POD) & To-Pay Collections Workflow (/lorry-receipts delivery confirmation)."
+> "Read CONTEXT.md, AGENTS.md, and PROGRESS.md in the SmartParcel workspace at `/Users/nantha/Documents/Projects/SmartParcel`. Then continue Phase 1 development. Today's task: Implement PDF LR Export (@react-pdf/renderer) & End-to-End QA Verification."
 
 
 ### Architecture & Planning
