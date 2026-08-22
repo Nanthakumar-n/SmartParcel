@@ -25,7 +25,15 @@ export async function getBookingRequestsByTenant(
 
   let query = supabase
     .from('booking_requests')
-    .select('*', { count: 'exact' })
+    .select(
+      `id, booking_ref, tenant_id, tenant_slug, status, customer_name, customer_phone,
+      origin_city, destination_city, goods_description, quantity, weight_kg, num_packages,
+      consignor_address_line1, consignor_address_line2, consignor_pin_code,
+      consignee_name, consignee_phone, consignee_address_line1, consignee_address_line2, consignee_pin_code,
+      assigned_hub_id, lr_id, notes, rejection_reason,
+      processed_by, processed_at, created_at, updated_at`,
+      { count: 'exact' }
+    )
     .order('created_at', { ascending: false });
 
   if (status) {
@@ -52,7 +60,14 @@ export async function getBookingRequestById(
 ): Promise<BookingRequestRow | null> {
   const { data, error } = await supabase
     .from('booking_requests')
-    .select('*')
+    .select(
+      `id, booking_ref, tenant_id, tenant_slug, status, customer_name, customer_phone,
+      origin_city, destination_city, goods_description, quantity, weight_kg, num_packages,
+      consignor_address_line1, consignor_address_line2, consignor_pin_code,
+      consignee_name, consignee_phone, consignee_address_line1, consignee_address_line2, consignee_pin_code,
+      assigned_hub_id, lr_id, notes, rejection_reason,
+      processed_by, processed_at, created_at, updated_at`
+    )
     .eq('id', id)
     .maybeSingle();
 

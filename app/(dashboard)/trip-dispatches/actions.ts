@@ -7,6 +7,7 @@ import { createServerClient } from '@/lib/supabase/server';
 import { createTripSchema, type CreateTripInput } from '@/lib/validations/trip';
 import { insertTrip, getTripById, updateTrip } from '@/lib/db/trips';
 import { getLRById, updateLRStatus, updateLRTrip } from '@/lib/db/lorry-receipts';
+import { insertStatusHistory, insertStatusHistoryBulk } from '@/lib/db/lr-status-history';
 import {
   type ActionResult,
   validationError,
@@ -106,7 +107,7 @@ export async function loadLRAction(
     await updateLRStatus(supabase, lrId, 'PICKED_UP');
 
     // 5. Write history audit trail
-    await supabase.from('lr_status_history').insert({
+    await insertStatusHistory(supabase, {
       lr_id: lrId,
       from_status: 'BOOKED',
       to_status: 'PICKED_UP',
@@ -181,7 +182,7 @@ export async function loadAllLRsAction(
       tenant_id: session.tenantId,
     }));
 
-    await supabase.from('lr_status_history').insert(historyRows);
+    await insertStatusHistoryBulk(supabase, historyRows);
 
     revalidatePath('/trip-dispatches');
     revalidatePath('/lorry-receipts');
@@ -264,7 +265,7 @@ export async function dispatchTripAction(
       tenant_id: session.tenantId,
     }));
 
-    await supabase.from('lr_status_history').insert(historyRows);
+    await insertStatusHistoryBulk(supabase, historyRows);
 
     // 5. Update Trip status to IN_TRANSIT
     await updateTrip(supabase, tripId, {
