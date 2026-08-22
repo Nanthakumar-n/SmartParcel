@@ -40,8 +40,9 @@ Current operations rely heavily on physical paper waybills (Lorry Receipts / *Bu
   - Production: `ap-south-1` (Mumbai) — lowest latency for Indian users
 
 ### **External Services & APIs**
-* **Messaging:** WhatsApp Business API via **WATI** — for sending PDF LRs and live tracking links
-* **Mapping & Geolocation:** **Google Maps API** for v1; migrate to MapmyIndia (Mappls API) in v2
+* **Messaging:** WhatsApp Business API via **WATI** — Phase 1.5: LR PDF delivery, status triggers, payment reminders. Phase 2a: tracking links, POD photo notifications.
+* **Mapping & Geolocation:** **Google Maps API** for v1/v2a; migrate to MapmyIndia (Mappls API) in v3
+* **FASTag / Toll:** NHAI FASTag API — auto-import toll transactions per vehicle (Phase 2b)
 * **Error Tracking:** Sentry
 
 ### **Deployment & Environments**
@@ -54,7 +55,7 @@ Current operations rely heavily on physical paper waybills (Lorry Receipts / *Bu
 
 ## 4. Build Phases & Scope
 
-### Phase 1 — v1 MVP (Web Admin Foundation)
+### Phase 1 — v1 MVP (Web Admin Foundation) ✅ COMPLETE
 **Goal:** Hub Managers can fully digitize daily LR operations. Fleet Owners have real-time visibility.
 
 | Feature | Notes |
@@ -78,16 +79,60 @@ Current operations rely heavily on physical paper waybills (Lorry Receipts / *Bu
 | Fleet Owner dashboard | Active LRs by status, monthly freight ₹, hub breakdown, outstanding To-Pay, vehicles IN_TRANSIT, recent LRs |
 | Sentry error monitoring | Configured from day one |
 
-### Phase 2 — v2 (Mobility & Customer Visibility)
+### Phase 1.5 — Web-Only Sprint (No Flutter Required)
+**Goal:** Close the most painful operational gaps for fleet owners before mobile development begins.
+
+#### Driver Trip Expense Ledger
 | Feature | Notes |
 |---|---|
-| Flutter driver app | Offline-first QR scan + GPS location pings |
+| `trip_expenses` table | Positive amounts = advance given to driver; negative = expense incurred. Categories: `ADVANCE`, `FUEL`, `TOLL`, `MAINTENANCE`, `BHATTA`, `LABOUR`, `MISC` |
+| `trip_expense_settlements` table | One settlement record per trip; net balance auto-computed; settlement mode: `CASH` / `UPI` / `BANK_TRANSFER` |
+| Expense summary in Trip Dispatch | New "Expenses" tab in existing trip side-drawer; running balance shown with color coding |
+| Dedicated `/trip-expenses` route | Full per-trip ledger, all categories, running balance, "Settle Trip" action |
+| RBAC | Both Fleet Owner and Hub Manager can add entries; only Fleet Owner can settle a trip |
+| Dashboard widget | Unsettled trips count + total outstanding balance on Fleet Owner dashboard |
+
+#### WhatsApp Notifications via WATI
+| Feature | Notes |
+|---|---|
+| Supabase Edge Function (`whatsapp-notify`) | Triggered by DB webhook on `lorry_receipts.status` change; idempotent via `whatsapp_notifications_log` |
+| LR Booking Confirmed (`BOOKED`) | PDF LR sent to consignor via WhatsApp |
+| Trip Dispatched (`IN_TRANSIT`) | Consignor notified with truck number |
+| Arrived at Destination (`ARRIVED`) | Consignee notified with hub contact |
+| Out for Delivery (`OUT_FOR_DELIVERY`) | Consignee gets "on the way" alert |
+| Goods Delivered (`DELIVERED`) | Consignee gets delivery confirmation + To-Pay amount if applicable |
+| Payment Reminder (scheduled cron) | pg_cron daily at 10:00 AM IST; targets `To-Pay` LRs overdue by 3+ days |
+| `/settings` route | Fleet Owner manages WATI credentials, per-event notification toggles |
+| `tenant_settings` table | Stores per-tenant WATI config and notification preferences |
+
+### Phase 2a — Flutter & Mobility
+**Goal:** Give drivers a mobile tool and give fleet owners live tracking.
+
+| Feature | Notes |
+|---|---|
+| Flutter driver app | Offline-first QR scan + GPS location pings (Riverpod + Hive) |
 | Real-time vehicle tracking (Google Maps) | Fleet Owner sees live truck positions |
-| LR status auto-update from QR scans | PICKED_UP / ARRIVED triggered by driver scan |
-| POD photo capture | Driver takes delivery photo in Flutter app |
-| WhatsApp notifications via WATI | PDF LR + tracking link sent on booking confirmation |
-| Customer public tracking page | No login; shareable link per LR |
+| LR status auto-update from QR scans | `PICKED_UP` / `ARRIVED` triggered by driver scan |
+| POD photo capture | Driver takes delivery photo; stored in Supabase Storage |
+| Automated POD notifications | Phase 1.5 sends text-only delivery confirmation. Phase 2a enhancement: **attach POD photo** (captured via Flutter) to the same DELIVERED WhatsApp message |
+| Customer public tracking page | No login; shareable `/track/[lr_number]` link |
+| Driver expense entry from Flutter | Driver submits expense entries + bill photo from app; linked to Phase 1.5 `trip_expenses` table |
+| Expense approval workflow | Driver submits → Hub Manager approves → Fleet Owner settles |
 | Route rate card / pricing | Per-route per-kg pricing table |
+
+### Phase 2b — Financial Reports & Advanced Expenses
+**Goal:** Give fleet owners analytical tools to understand profitability and automate expense capture.
+
+| Feature | Notes |
+|---|---|
+| Dedicated `/reports` route | Fleet Owner only |
+| Monthly P&L report | Freight revenue vs. total trip expenses per month |
+| Hub revenue breakdown | Revenue and shipment count per hub |
+| Vehicle-wise P&L | Freight earned per vehicle vs. total expenses on that vehicle |
+| Route-wise cost analysis | Average expense per trip on each route corridor |
+| Outstanding To-Pay aging report | Receivables overdue by 0–7, 7–30, 30+ days |
+| FastTag auto-import | Pull toll transactions from NHAI FASTag API by vehicle reg number; auto-create `TOLL` expense entries |
+| Export to Excel / PDF | Download any report |
 
 ### Phase 3 — v3 (Intelligence & Scale)
 | Feature | Notes |
@@ -95,7 +140,6 @@ Current operations rely heavily on physical paper waybills (Lorry Receipts / *Bu
 | Super-admin panel | Manage all tenants on the platform |
 | E-Way Bill API integration | NIC portal auto-generation |
 | GSTIN verification API | GST portal lookup |
-| Financial reports & reconciliation | Monthly P&L, To-Pay outstanding, hub revenue |
 | Multi-stop / transhipment trips | Goods passing through intermediate hubs |
 | Damage & claims workflow | Dispute resolution record |
 | SaaS billing & subscriptions | Per-tenant plan management |
@@ -110,6 +154,19 @@ Current operations rely heavily on physical paper waybills (Lorry Receipts / *Bu
 * **Vehicle Numbers:** Indian state registration format. Examples: `KA 01 AB 1234`, `MH 12 C 5678`. Regex: `/^[A-Z]{2}\s\d{2}\s[A-Z]{1,2}\s\d{4}$/`. Store uppercase.
 * **Currency:** Indian Rupee (`₹` / INR) with Indian numbering (e.g., `₹1,00,000`). Use `Intl.NumberFormat('en-IN')`. **Store all amounts in paise (bigint integer, 1 INR = 100 paise).**
 * **Taxation:** GSTIN: 15-character alphanumeric. Pin Codes: 6-digit. Regex: `/^\d{6}$/`.
+
+### **Expense Category Enum** (`trip_expense_category`)
+| Value | Description |
+|---|---|
+| `ADVANCE` | Cash advance given to driver before/during trip — stored as **positive** paise |
+| `FUEL` | Diesel/petrol fill on the road — stored as **negative** paise |
+| `TOLL` | Highway toll / FastTag charge — stored as **negative** paise |
+| `MAINTENANCE` | Roadside repair or breakdown cost — stored as **negative** paise |
+| `BHATTA` | Driver daily allowance (food/stay) — stored as **negative** paise |
+| `LABOUR` | Loading/unloading labour paid by driver — stored as **negative** paise |
+| `MISC` | Miscellaneous; free-text description required — stored as **negative** paise |
+
+Running balance = `SUM(amount)` on a trip. **Positive balance → driver owes company. Negative balance → company owes driver.**
 
 ### **Multi-Tenant Security Model**
 Every database table (except global system metadata) must contain a `tenant_id UUID NOT NULL` column. RLS policies on every table link `tenant_id` to `auth.uid()`. No query runs without `tenant_id` context.
@@ -364,22 +421,26 @@ Format: `{HUB_CODE}-{YYYY}-{6-digit zero-padded sequence}`
 
 ## 19. Core Database Tables (Complete ERD Summary)
 
-| Table | Description |
-|---|---|
-| `tenants` | Root account for each logistics company |
-| `users` | All users; `user_role` column mirrors JWT claim |
-| `hubs` | Branch/hub locations |
-| `vehicles` | Truck registry |
-| `drivers` | Driver profiles (web records in v1; linked to user account in v2) |
-| `trip_schedules` | Recurring route schedules defined by Fleet Owner |
-| `trips` | One trip = one vehicle + driver + route + many LRs |
-| `booking_requests` | Raw customer submissions from public booking form |
-| `lorry_receipts` | Core LR document |
-| `lr_status_history` | Immutable audit log of every LR status transition |
-| `to_pay_collections` | Cash/UPI collection record for To-Pay LRs |
-| `proof_of_deliveries` | POD record (receiver name, timestamp, photo in v2) |
-| `location_pings` | GPS breadcrumbs from driver (v2) |
-| `qr_scans` | Load/unload scan events (v2) |
+| Table | Phase | Description |
+|---|---|---|
+| `tenants` | v1 | Root account for each logistics company |
+| `users` | v1 | All users; `user_role` column mirrors JWT claim |
+| `hubs` | v1 | Branch/hub locations |
+| `vehicles` | v1 | Truck registry |
+| `drivers` | v1 | Driver profiles (web records in v1; linked to user account in v2a) |
+| `trip_schedules` | v1 | Recurring route schedules defined by Fleet Owner |
+| `trips` | v1 | One trip = one vehicle + driver + route + many LRs |
+| `booking_requests` | v1 | Raw customer submissions from public booking form |
+| `lorry_receipts` | v1 | Core LR document |
+| `lr_status_history` | v1 | Immutable audit log of every LR status transition |
+| `to_pay_collections` | v1 | Cash/UPI collection record for To-Pay LRs |
+| `proof_of_deliveries` | v1 | POD record (receiver name, timestamp, photo in v2a) |
+| `trip_expenses` | v1.5 | Per-trip expense & advance ledger; positive = advance, negative = expense |
+| `trip_expense_settlements` | v1.5 | One settlement record per trip at trip close; net balance computed |
+| `tenant_settings` | v1.5 | Per-tenant WATI config and per-event notification preferences (JSONB) |
+| `whatsapp_notifications_log` | v1.5 | Idempotent log of every WhatsApp message sent via WATI; prevents duplicate sends |
+| `location_pings` | v2a | GPS breadcrumbs from driver Flutter app |
+| `qr_scans` | v2a | Load/unload scan events from driver Flutter app |
 
 ---
 

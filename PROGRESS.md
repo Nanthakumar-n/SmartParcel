@@ -10,7 +10,7 @@
 **Phase 1 (v1 MVP Web Admin) — 100% Complete & Verified**
 
 ## Current Status
-🟢 **All 18 Phase 1 features built, tested, and verified with zero errors. Ready for Phase 2 (Flutter Driver App & Mobility).**
+🟢 **All 18 Phase 1 features built, tested, and verified. Phase 1.5 plan approved — ready to start Driver Expense Ledger + WhatsApp WATI sprint.**
 
 ---
 
@@ -46,18 +46,30 @@
 
 ---
 
-## 🔲 Up Next — Phase 2 Scope (Mobility & Customer Visibility)
+## 🔲 Up Next — Phase 1.5 (Web-Only Sprint, No Flutter)
 
-1. **Flutter Driver Mobile App (`/apps/driver_app`)**:
-   - Offline-first state management (Riverpod + Hive).
-   - QR code scanning for cargo pickup, loading, and arrival.
-   - Background GPS location pings to Supabase.
-   - Driver delivery photo capture for Proof of Delivery.
-2. **Real-Time Vehicle & Fleet Tracking**:
-   - Google Maps live truck position view for Fleet Owners.
-3. **Customer Public Tracking & WhatsApp Notifications**:
-   - Public tracking link per LR (`/track/[lr_number]`).
-   - WATI WhatsApp API integration for booking confirmation & PDF waybill delivery.
+### Feature 1: Driver Trip Expense Ledger
+1. **DB Migrations:**
+   - Confirm next safe migration number via `supabase migration list`
+   - `000011_trip_expenses.sql`: `trip_expenses` (immutable, void-pattern) + `trip_expense_settlements` + RLS
+2. **Validation, DB helpers, service layer:** `lib/validations/trip-expense.ts`, `lib/db/trip-expenses.ts`, `lib/services/trip-expense.ts`
+3. **Server Actions + UI:** `/trip-expenses` full ledger page + expenses tab in trip side-drawer
+4. **Dashboard widget:** "Unsettled Trips" card on Fleet Owner dashboard
+
+### Feature 2: WhatsApp Notifications via WATI
+1. **Pre-flight (manual):** Create WATI account, submit 6 message templates for Meta approval (24–48 hrs lead time)
+2. **DB Migration:** `000012_whatsapp_settings.sql`: `tenant_settings` + `whatsapp_notifications_log` (with `reminder_sequence` column)
+3. **Edge Functions:** `whatsapp-notify` (DB webhook triggered) + `payment-reminder` (pg_cron daily)
+4. **Settings UI:** `/settings` route with WATI config, per-event toggles, reminder delay selector
+
+### Key Design Decisions for Phase 1.5
+- Expense rows are **immutable** (void-entry pattern, mirrors `lr_status_history`)
+- `driver_id` is **nullable** on `trip_expenses` (auto-populated from trip if assigned)
+- Settlement is re-openable: Fleet Owner can **delete and re-settle** a trip
+- Payment reminder recipient: **`consignee_phone`** for TO_PAY LRs, `consignor_phone` for PAID LRs
+- WhatsApp idempotency: **`UNIQUE(lr_id, event_type, reminder_sequence)`** — `reminder_sequence` is NULL for one-time events, incremented for daily reminders
+
+### Full plan: [`PHASE_1_5_PLAN.md`](./PHASE_1_5_PLAN.md)
 
 ---
 
@@ -85,7 +97,7 @@
 
 Paste this as your opening message in the next chat:
 
-> "Read CONTEXT.md, AGENTS.md, and PROGRESS.md in the SmartParcel workspace at `/Users/nantha/Documents/Projects/SmartParcel`. All Phase 1 v1 MVP features are complete. Today's task: Kick off Phase 2 development (Flutter Driver Mobile App & Mobility Setup)."
+> "Read CONTEXT.md, AGENTS.md, and PROGRESS.md in the SmartParcel workspace at `/Users/nantha/Documents/Projects/SmartParcel`. Phase 1 is 100% complete. We are now starting **Phase 1.5**: Driver Trip Expense Ledger + WhatsApp WATI notifications (web-only sprint, no Flutter). Full plan is in `PHASE_1_5_PLAN.md`. Begin with the DB migrations."
 
 
 ### Architecture & Planning

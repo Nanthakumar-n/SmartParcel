@@ -65,6 +65,21 @@ smartparcel/
 │   │   │   ├── actions.ts
 │   │   │   └── _components/
 │   │   │
+│   │   ├── trip-expenses/               ← Phase 1.5: driver expense ledger
+│   │   │   ├── page.tsx                 ← Full per-trip ledger (Fleet Owner + Hub Manager)
+│   │   │   ├── loading.tsx              ← Skeleton (REQUIRED)
+│   │   │   ├── actions.ts               ← addExpense, voidExpense, settleTrip, reopenSettlement
+│   │   │   └── _components/
+│   │   │       ├── expense-table.tsx    ← Per-trip entries; voids shown with strikethrough
+│   │   │       ├── add-expense-dialog.tsx  ← Keyboard-first: Tab category→amount→desc→submit
+│   │   │       └── settle-trip-dialog.tsx
+│   │   │
+│   │   ├── settings/                    ← Phase 1.5: tenant settings (Fleet Owner only)
+│   │   │   ├── page.tsx
+│   │   │   ├── actions.ts               ← saveSettings — requireRole(['fleet_owner']) FIRST
+│   │   │   └── _components/
+│   │   │       └── whatsapp-settings.tsx ← WATI config + per-event toggles
+│   │   │
 │   │   └── users/
 │   │       ├── page.tsx
 │   │       ├── loading.tsx
@@ -78,7 +93,7 @@ smartparcel/
 │   │
 │   ├── api/                             ← API routes (webhooks only)
 │   │   └── webhooks/
-│   │       └── wati/route.ts            ← WhatsApp callback (v2)
+│   │       └── wati/route.ts            ← WhatsApp delivery status callback (Phase 1.5)
 │   │
 │   ├── layout.tsx                       ← Root layout (fonts, metadata)
 │   └── globals.css                      ← Tailwind base styles
@@ -112,7 +127,8 @@ smartparcel/
 │   │   ├── trips.ts                     ← dispatchTrip, createTrip
 │   │   ├── hubs.ts                      ← createHub, updateHub
 │   │   ├── booking.ts                   ← acceptBooking, rejectBooking
-│   │   └── users.ts                     ← inviteUser, updateUserRole
+│   │   ├── users.ts                     ← inviteUser, updateUserRole
+│   │   └── trip-expense.ts              ← Phase 1.5: addExpense, voidExpense, settleTrip, reopenSettlement
 │   │
 │   ├── db/                              ← Typed Supabase queries (Layer 3)
 │   │   ├── lr.ts                        ← getLRById, getLRList, insertLR
@@ -123,7 +139,9 @@ smartparcel/
 │   │   ├── drivers.ts                   ← getDriversByTenant
 │   │   ├── booking-requests.ts          ← getPendingBookings
 │   │   ├── proof-of-delivery.ts         ← insertProofOfDelivery
-│   │   └── to-pay-collections.ts        ← insertToPayCollection
+│   │   ├── to-pay-collections.ts        ← insertToPayCollection
+│   │   ├── trip-expenses.ts             ← Phase 1.5: getExpensesByTrip, insertExpense, voidExpense
+│   │   └── tenant-settings.ts           ← Phase 1.5: getTenantSettings, upsertTenantSettings
 │   │
 │   ├── validations/                     ← Zod schemas per domain
 │   │   ├── lr.ts                        ← lrCreateSchema, lrUpdateSchema
@@ -131,7 +149,8 @@ smartparcel/
 │   │   ├── vehicle.ts                   ← vehicleCreateSchema
 │   │   ├── trip.ts                      ← tripCreateSchema
 │   │   ├── booking.ts                   ← bookingRequestSchema
-│   │   └── user.ts                      ← userInviteSchema
+│   │   ├── user.ts                      ← userInviteSchema
+│   │   └── trip-expense.ts              ← Phase 1.5: expenseCreateSchema, settlementSchema
 │   │
 │   ├── auth/                            ← Auth utilities
 │   │   ├── require-role.ts              ← requireRole() guard
@@ -159,11 +178,16 @@ smartparcel/
 ├── supabase/
 │   ├── config.toml                      ← Supabase local config
 │   ├── seed.sql                         ← Dev seed data
-│   └── migrations/                      ← SQL migrations (ordered)
-│       ├── 20250101000001_tenants.sql
-│       ├── 20250101000002_users.sql
-│       ├── 20250101000003_hubs.sql
-│       └── ...
+│   ├── migrations/                      ← SQL migrations (ordered by timestamp)
+│   │   ├── 20250101000001_tenants.sql
+│   │   ├── 20250101000002_users.sql
+│   │   ├── 20250101000003_hubs.sql
+│   │   └── ...                          ← Run `supabase migration list` before adding new ones
+│   └── functions/                       ← Supabase Edge Functions (Deno runtime — NOT Node.js)
+│       ├── whatsapp-notify/             ← Phase 1.5: DB webhook on LR status change → WATI
+│       │   └── index.ts                 ← Use Deno.env.get(), never process.env
+│       └── payment-reminder/            ← Phase 1.5: pg_cron daily @ 04:00 UTC (10:00 AM IST)
+│           └── index.ts
 │
 ├── public/                              ← Static assets
 ├── .env.local                           ← Dev environment (never commit)

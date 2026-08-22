@@ -5,8 +5,16 @@ Before starting any task, read `CONTEXT.md` in the workspace root. It is the sin
 
 ---
 
-## V1 MVP Scope Constraint
-The Flutter mobile app, live tracking, public tracking page, WhatsApp notifications, and super-admin panel are **deferred to v2**. Do not generate code for these unless explicitly instructed.
+## Scope Constraints by Phase
+
+**Phase 1 (v1 MVP) — ✅ COMPLETE.** Do not re-generate or overwrite any Phase 1 features.
+
+**Phase 1.5 — Current Sprint (Web-only, no Flutter).** In scope:
+- Driver Trip Expense Ledger (`trip_expenses`, `trip_expense_settlements`)
+- WhatsApp Notifications via WATI (Supabase Edge Functions + DB webhooks)
+- Tenant Settings page (`/settings`)
+
+**Phase 2a / 2b / 3 — Deferred.** Do not generate code for Flutter, live GPS tracking, public tracking page, FastTag auto-import, financial reports, super-admin panel, or SaaS billing unless explicitly instructed.
 
 ---
 
@@ -23,6 +31,7 @@ The Flutter mobile app, live tracking, public tracking page, WhatsApp notificati
 | Verifying a completed task | `qa-verification` |
 | Implementing auth, login, protected routes, or role checks | `rbac-auth` |
 | Implementing any LR status change, dispatch, or delivery flow | `lr-state-machine` |
+| Implementing any WhatsApp notification, WATI config, or Edge Function trigger | `whatsapp-wati` (create skill if missing) |
 | Reviewing any generated code, file, or set of changes | `code-review` |
 
 ---

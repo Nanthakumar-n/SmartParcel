@@ -226,7 +226,12 @@ All forms use `react-hook-form` with `zodResolver`. Never validate manually.
 export const lrCreateSchema = z.object({
   from_hub_id: z.string().uuid('Select an origin hub'),
   consignor_phone: z.string().regex(INDIA_PHONE_REGEX, 'Enter a valid Indian mobile number'),
-  freight_amount: z.coerce.number().positive('Enter the freight amount'),
+  // ✅ Correct pattern for monetary inputs — string-parsed, converts to paise:
+  freight_amount: z
+    .string()
+    .regex(/^\d+(\.\d{1,2})?$/, 'Enter a valid amount (e.g. 500 or 500.50)')
+    .transform(v => Math.round(parseFloat(v) * 100)) // stores in paise
+    .refine(v => v >= 1, 'Amount must be at least ₹0.01'),
   // ... see india-domain-formatting skill for all validation patterns
 });
 export type LRCreateInput = z.infer<typeof lrCreateSchema>;
@@ -331,11 +336,16 @@ NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 SUPABASE_SERVICE_ROLE_KEY=eyJ...  # Server-only — never in client code
 SENTRY_DSN=https://xxx@sentry.io/xxx
+
+# Phase 1.5 — WhatsApp / WATI (server-only, never NEXT_PUBLIC_)
+WATI_API_ENDPOINT=https://live-XXX.wati.io
+WATI_API_TOKEN=eyJ...
 ```
 
 - `NEXT_PUBLIC_` prefix **only** for browser-safe values.
-- `SUPABASE_SERVICE_ROLE_KEY` **never** in client code or Server Actions.
+- `SUPABASE_SERVICE_ROLE_KEY`, `WATI_API_TOKEN` — **never** in client code or Server Actions.
 - Never hardcode env values in source code.
+- Inside **Supabase Edge Functions** (Deno runtime), read env vars with `Deno.env.get()` — **not** `process.env`. See §18.
 
 ---
 
@@ -354,30 +364,100 @@ Format: `type(scope): description`
 | `style` | Formatting, whitespace (no logic change) |
 | `test` | Adding or updating tests |
 
-**Scopes:** `lr`, `hubs`, `trips`, `rls`, `auth`, `ui`, `deps`, `dashboard`
+**Scopes:**
 
-Example: `feat(lr): add keyboard-first LR creation form`
+| Scope | Use for |
+|---|---|
+| `lr` | Lorry receipt features |
+| `hubs` | Hub / branch management |
+| `trips` | Trip scheduling and dispatch |
+| `expenses` | Trip expense ledger (Phase 1.5) |
+| `whatsapp` | WATI notifications and Edge Functions (Phase 1.5) |
+| `settings` | Tenant settings page (Phase 1.5) |
+| `rls` | Row-Level Security policies and migrations |
+| `auth` | Authentication, RBAC, session |
+| `ui` | Shared components, design system |
+| `deps` | Dependency updates |
+| `dashboard` | Fleet Owner / Hub Manager dashboard |
+
+Example: `feat(expenses): add trip expense ledger with void-entry pattern`
 
 ### Branch Naming
-Format: `type/short-description` — e.g., `feat/lr-creation`, `fix/rls-hub-policy`
+Format: `type/short-description` — e.g., `feat/trip-expenses`, `fix/rls-hub-policy`
 
 ---
 
 ## 16. Testing Strategy
 
-> Testing is **deferred** until the first 3 features (LR creation, hub management, dashboard) are built.
+> Testing is **deferred until post-Phase 1.5**. Phase 1 and 1.5 use `automated-ui-verification` as the primary QA gate.
 
 - **Framework:** Vitest
+- **First targets (Phase 1.5 onwards):** `lib/services/trip-expense.ts` (financial balance calculations) and `lib/validations/trip-expense.ts` (amount parsing, MISC description guard) — these involve money and should be unit-tested.
 - **What to test:** Zod schemas, service functions, utility functions
-- **What NOT to test in v1:** UI components — use `automated-ui-verification` skill instead
+- **What NOT to test:** UI components — use `automated-ui-verification` skill instead
 - **Test location:** Colocated `__tests__/` directories next to the code they test
 - **Mocking:** Mock `createServerClient()` for service layer tests
 
 ---
 
-## 17. Flutter Mobile Guidelines (v2)
+## 17. Flutter Mobile Guidelines (Phase 2a)
 
 - Feature-first layout: `lib/features/<feature_name>/`.
 - Use Riverpod for all state management.
 - Offline-first: save to Hive before calling Supabase.
 - See `mobile-offline-first` skill for detailed patterns.
+
+---
+
+## 18. Supabase Edge Functions (Phase 1.5+)
+
+Edge Functions run on the **Deno runtime** — not Node.js. Key differences from Server Actions and API Routes:
+
+### When to Use What
+
+| Mechanism | Use When |
+|---|---|
+| **Server Action** | Form mutations, user-initiated operations |
+| **API Route** (`app/api/`) | Third-party webhooks, OAuth callbacks |
+| **Edge Function** | DB-triggered events, scheduled cron jobs, heavy async work that should run close to the DB |
+
+### Environment Variables in Edge Functions
+
+```typescript
+// ✅ Correct — Deno runtime
+const watiToken = Deno.env.get('WATI_API_TOKEN');
+const supabaseUrl = Deno.env.get('SUPABASE_URL');
+const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+// ❌ Wrong — process.env does not exist in Deno
+const watiToken = process.env.WATI_API_TOKEN;
+```
+
+### Supabase Client Inside Edge Functions
+
+```typescript
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+// Use service role key — Edge Functions run server-side, bypass RLS intentionally
+const supabase = createClient(
+  Deno.env.get('SUPABASE_URL')!,
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+);
+```
+
+### Folder Location
+
+```
+supabase/
+  functions/
+    whatsapp-notify/
+      index.ts    ← DB webhook triggered (LR status changes)
+    payment-reminder/
+      index.ts    ← pg_cron scheduled (daily 10:00 AM IST)
+```
+
+### Rules
+- Edge Functions are deployed via `supabase functions deploy <name>` — not part of the Next.js build.
+- Set function env vars via `supabase secrets set KEY=value` (not `.env.local`).
+- Always handle errors and write to `whatsapp_notifications_log` — Edge Functions have no automatic retry on 5xx.
+- Use the idempotency pattern (`UNIQUE(lr_id, event_type, reminder_sequence)`) to guard against duplicate webhook deliveries.
