@@ -1,0 +1,6 @@
+Phase 1 bugs:
+1. Action button in Lorry receipt dashoard does not have any effect.
+2. Booking created before Trip dispatch created are not available to assign to the trip. All bookking should be able to picked up when a new trip is created matching the source - dstn.
+3. When a new booking is created and the trip manifest is not allowing to start the trip even though the trip has one assigned booking. We should allow the trip to begin even without a box. Sometimes hubs need a truck (may be add a "handle truck short" box to track such runs)
+4. Trip dispatch runs without a vachile and driver assigned. We should have a driver and truck assigned for every trip before it starts (Fleet owner should assign or hub owner can assign, but it shoudl be assigned before start). 
+5. Hub owner shoudl be able to manage the trips as well. Right now as a fleet owner I  can make a trip to "In transit" status but unable to complete it. 

@@ -175,60 +175,64 @@ Every database table (except global system metadata) must contain a `tenant_id U
 
 ## 6. LR Status State Machine
 
+> ⚠️ **Updated 2026-08-23** — See [`LIFECYCLE.md`](./LIFECYCLE.md) for the full canonical specification. Summary below reflects current agreed design.
+
 ```
 Customer submits online booking
         │
         ▼
   BOOKING_PENDING  ──── Hub Manager rejects ────► CANCELLED
         │
-        │ Hub Manager accepts (auto-creates LR)
+        │ Hub Manager accepts → creates LR + prints thermal receipt
         ▼
-      BOOKED  ──────────────────────────────────► CANCELLED (Hub Manager, own hub only)
-        │                                          (Fleet Owner can cancel any time)
-        │ Hub Manager confirms goods loaded
-        ▼
-    PICKED_UP
+      BOOKED  ──────────────────────────────────► CANCELLED
+        │    (Hub Manager = own hub, BOOKED only)
+        │    (Fleet Owner = any stage up to IN_TRANSIT)
         │
-        │ Fleet Owner or Hub Manager dispatches trip
+        │ Trip dispatched (all assigned BOOKED LRs → IN_TRANSIT atomically)
         ▼
     IN_TRANSIT  ──────────────────────────────────► CANCELLED (Fleet Owner only)
+        │                                            LRs revert to BOOKED, vehicle → AVAILABLE
         │
-        │ Destination Hub Manager confirms goods received
+        │ Trip marked ARRIVED (Hub Manager at destination, or Fleet Owner)
         ▼
-     ARRIVED
+     ARRIVED  (all LRs on trip arrive simultaneously)
         │
-        │ Destination Hub Manager marks ready for pickup
-        ▼
- OUT_FOR_DELIVERY
-        │
-        │ Destination Hub Manager marks delivered (captures POD + To-Pay)
+        │ Hub Manager (destination) or Fleet Owner marks individual LR delivered
         ▼
     DELIVERED  (terminal state — immutable)
 ```
 
+**Deprecated statuses (do NOT use in new code):** ~~`PICKED_UP`~~, ~~`OUT_FOR_DELIVERY`~~ — removed from active flow per 2026-08-23 design review. May still exist in DB enum for migration safety.
+
 ### Who Triggers Each Transition
 
-| Transition | Triggered By |
-|---|---|
-| → BOOKING_PENDING | System (auto, when customer submits form or Hub Manager creates LR) |
-| → BOOKED | Hub Manager (at origin hub) — prints thermal receipt at this point |
-| → PICKED_UP | Hub Manager (at origin hub) confirms goods loaded onto truck |
-| → IN_TRANSIT | Fleet Owner or Hub Manager dispatches trip |
-| → ARRIVED | Hub Manager (at destination hub) confirms receipt of goods |
-| → OUT_FOR_DELIVERY | Hub Manager (at destination hub) |
-| → DELIVERED | Hub Manager (at destination hub) — captures POD + To-Pay collection |
-| → CANCELLED | Hub Manager (for BOOKING_PENDING/BOOKED at their hub only); Fleet Owner (any stage) |
+| Transition | Triggered By | Hub Scope |
+|---|---|---|
+| → `BOOKING_PENDING` | System (auto on customer web form) | — |
+| → `BOOKED` | Hub Manager (accept booking request) or direct LR creation | Origin hub |
+| → `IN_TRANSIT` | Fleet Owner or Hub Manager — via Trip Dispatch | Origin hub |
+| → `ARRIVED` | Fleet Owner or Hub Manager — via Trip "Mark Arrived" | Destination hub only |
+| → `DELIVERED` | Fleet Owner or Hub Manager | Destination hub only |
+| → `CANCELLED` (BOOKING_PENDING/BOOKED) | Fleet Owner or Hub Manager | Own hub only |
+| → `CANCELLED` (IN_TRANSIT) | Fleet Owner only | Any |
 
 ---
 
 ## 7. Trip Model
 
+> ⚠️ **Updated 2026-08-23** — See [`LIFECYCLE.md`](./LIFECYCLE.md) §3 for the full trip lifecycle specification.
+
 * **One trip carries MANY LRs** (realistic truck loading — multiple Builties on one run).
-* **Trip = vehicle + driver + route (from_hub → to_hub) + departure datetime + list of LRs**.
+* **Trip = vehicle + route (from_hub → to_hub) + departure datetime + list of LRs**. Driver is optional (contractor trucks allowed).
 * Fleet Owner defines **recurring schedules** per route (e.g., MUM→DEL every Monday & Thursday).
 * Hub Manager can create **ad-hoc one-off trips** as needed.
-* When Hub Manager creates an LR, it **auto-assigns to the next scheduled trip** for that route. Hub Manager can override manually.
-* Dispatching a trip sets all its LRs from PICKED_UP → IN_TRANSIT atomically.
+* When a **trip is created**, the system **auto-assigns** all BOOKED LRs with `trip_id IS NULL` matching the route. Hub Manager can manually add or remove LRs before dispatch.
+* **Dispatching** a trip atomically moves all assigned BOOKED LRs → `IN_TRANSIT`. Vehicle → `IN_TRANSIT`.
+* **Marking a trip ARRIVED** atomically moves all its IN_TRANSIT LRs → `ARRIVED`. Vehicle → `AVAILABLE`. Trip → `COMPLETED`.
+* **Cancelling a SCHEDULED trip** releases all assigned LRs back to pool (`trip_id = NULL`, status stays BOOKED).
+* **Cancelling an IN_TRANSIT trip** (Fleet Owner only) reverts all IN_TRANSIT LRs → BOOKED + `trip_id = NULL`. Vehicle → `AVAILABLE`.
+* A **vehicle must be assigned** before a trip can be dispatched. Driver assignment is optional.
 
 ---
 
@@ -324,6 +328,8 @@ Roles stored as **Supabase custom JWT claims**. Claim key: `user_role`. Values: 
 
 ### Permission Matrix
 
+> ⚠️ **Updated 2026-08-23** — Reflects revised lifecycle. PICKED_UP and OUT_FOR_DELIVERY actions removed.
+
 | Action | Fleet Owner | Hub Manager |
 |---|---|---|
 | Register tenant / company profile | Yes | No |
@@ -332,17 +338,19 @@ Roles stored as **Supabase custom JWT claims**. Claim key: `user_role`. Values: 
 | Manage vehicles | Yes | No |
 | Manage driver records | Yes | No |
 | Define trip schedules | Yes | No |
-| Create ad-hoc trip | Yes | Yes |
+| Create ad-hoc trip | Yes | Yes (origin = own hub) |
+| Assign / remove LRs from trip manifest | Yes | Yes (origin hub only) |
 | Create LR (Hub Manager direct) | Yes | Yes (own hub only) |
 | Accept/reject customer booking requests | Yes | Yes (own hub only) |
 | View all LRs (all hubs) | Yes | Yes (read-only for other hubs) |
 | Edit LR | Yes | Yes (own hub, BOOKING_PENDING/BOOKED only) |
 | Cancel LR (BOOKING_PENDING/BOOKED) | Yes | Yes (own hub only) |
 | Cancel LR (IN_TRANSIT or later) | Yes | No |
-| Dispatch trip (IN_TRANSIT) | Yes | Yes |
-| Confirm ARRIVED (destination hub) | Yes | Yes (own hub only) |
-| Mark OUT_FOR_DELIVERY | Yes | Yes (own hub only) |
-| Mark DELIVERED + capture POD | Yes | Yes (own hub only) |
+| Dispatch trip (SCHEDULED → IN_TRANSIT) | Yes | Yes (origin hub only) |
+| Mark trip Arrived (IN_TRANSIT → COMPLETED) | Yes | Yes (destination hub only) |
+| Cancel trip (SCHEDULED) | Yes | Yes (origin hub only) |
+| Cancel trip (IN_TRANSIT) | Yes | No |
+| Mark LR DELIVERED + capture POD | Yes | Yes (destination hub only) |
 | Record To-Pay collection | Yes | Yes |
 | Print LR thermal / PDF | Yes | Yes |
 | View Fleet Owner dashboard | Yes | No |

@@ -99,6 +99,7 @@ export function TripDialog({ hubs, vehicles, drivers }: TripDialogProps) {
       setOpen(val);
       if (!val) reset();
     }}>
+      {/* Bug 1 fix: correct @base-ui-react DialogTrigger pattern */}
       <DialogTrigger
         render={
           <Button className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white shadow-xs">

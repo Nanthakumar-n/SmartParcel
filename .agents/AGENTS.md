@@ -33,6 +33,7 @@ Before starting any task, read `CONTEXT.md` in the workspace root. It is the sin
 | Implementing any LR status change, dispatch, or delivery flow | `lr-state-machine` |
 | Implementing any WhatsApp notification, WATI config, or Edge Function trigger | `whatsapp-wati` (create skill if missing) |
 | Reviewing any generated code, file, or set of changes | `code-review` |
+| Investigating or fixing any bug, regression, or broken feature | `bug-fix` |
 
 ---
 

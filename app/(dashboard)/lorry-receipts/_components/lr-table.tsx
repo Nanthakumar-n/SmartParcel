@@ -41,9 +41,10 @@ interface LRTableProps {
   initialLRs: LRDetailed[];
   hubs: HubRow[];
   tenantName?: string;
+  userRole?: string;
 }
 
-export function LRTable({ initialLRs, hubs, tenantName }: LRTableProps) {
+export function LRTable({ initialLRs, hubs, tenantName, userRole }: LRTableProps) {
   const [lrs, setLRs] = useState(initialLRs);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
@@ -371,7 +372,7 @@ export function LRTable({ initialLRs, hubs, tenantName }: LRTableProps) {
 
                     {/* Actions */}
                     <TableCell className="py-3.5 text-right">
-                      <LRStatusActionMenu lr={lr} tenantName={tenantName} />
+                      <LRStatusActionMenu lr={lr} tenantName={tenantName} userRole={userRole} />
                     </TableCell>
                   </TableRow>
                 ))

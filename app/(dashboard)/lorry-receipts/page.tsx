@@ -123,7 +123,7 @@ export default async function LorryReceiptsPage() {
       </div>
 
       {/* LR Table */}
-      <LRTable initialLRs={lrs} hubs={hubs} tenantName={tenantName} />
+      <LRTable initialLRs={lrs} hubs={hubs} tenantName={tenantName} userRole={session.role} />
     </div>
   );
 }

@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 };
 
 export default async function TripDispatchesPage() {
-  await requireRole(['fleet_owner', 'hub_manager']);
+  const session = await requireRole(['fleet_owner', 'hub_manager']);
   const supabase = createServerClient();
 
   const [tripsResult, hubsResult, vehiclesResult, driversResult] =
@@ -63,7 +63,7 @@ export default async function TripDispatchesPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-slate-900">{scheduledTripsCount}</div>
-            <p className="text-xs text-slate-500 mt-1">Awaiting cargo load confirmation</p>
+            <p className="text-xs text-slate-500 mt-1">Trips awaiting dispatch</p>
           </CardContent>
         </Card>
 
@@ -95,7 +95,7 @@ export default async function TripDispatchesPage() {
       </div>
 
       {/* Trips Table */}
-      <TripTable initialTrips={trips} />
+      <TripTable initialTrips={trips} userRole={session.role} />
     </div>
   );
 }

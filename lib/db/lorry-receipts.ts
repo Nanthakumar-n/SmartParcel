@@ -431,4 +431,65 @@ export async function getRecentLRsByTenant(
   return (data as unknown as LRDetailed[]) ?? [];
 }
 
+/**
+ * Auto-assign all BOOKED pool LRs (trip_id IS NULL) matching a route to the given trip.
+ * Called immediately after trip creation so the manifest is pre-populated.
+ * Returns the number of LRs assigned.
+ */
+export async function assignPoolLRsToTrip(
+  supabase: AnySupabaseClient,
+  tripId: string,
+  fromHubId: string,
+  toHubId: string,
+  tenantId: string
+): Promise<number> {
+  const { data, error } = await supabase
+    .from('lorry_receipts')
+    .update({ trip_id: tripId, updated_at: new Date().toISOString() })
+    .eq('tenant_id', tenantId)
+    .eq('from_hub_id', fromHubId)
+    .eq('to_hub_id', toHubId)
+    .eq('status', 'BOOKED')
+    .is('trip_id', null)
+    .select('id');
 
+  if (error) throw error;
+  return data?.length ?? 0;
+}
+
+/**
+ * Release all BOOKED LRs assigned to a trip back to the pool (trip_id = NULL).
+ * Called when a SCHEDULED trip is cancelled — LRs remain BOOKED for re-assignment.
+ */
+export async function releaseTripLRs(
+  supabase: AnySupabaseClient,
+  tripId: string
+): Promise<void> {
+  const { error } = await supabase
+    .from('lorry_receipts')
+    .update({ trip_id: null, updated_at: new Date().toISOString() })
+    .eq('trip_id', tripId)
+    .eq('status', 'BOOKED');
+
+  if (error) throw error;
+}
+
+/**
+ * Revert all IN_TRANSIT LRs on a trip back to BOOKED and release them to the pool.
+ * Called when a Fleet Owner cancels an IN_TRANSIT trip (e.g. truck breakdown).
+ * Returns the IDs of affected LRs for audit trail writing.
+ */
+export async function revertTripLRsToBooked(
+  supabase: AnySupabaseClient,
+  tripId: string
+): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('lorry_receipts')
+    .update({ status: 'BOOKED', trip_id: null, updated_at: new Date().toISOString() })
+    .eq('trip_id', tripId)
+    .eq('status', 'IN_TRANSIT')
+    .select('id');
+
+  if (error) throw error;
+  return (data ?? []).map((r) => r.id);
+}

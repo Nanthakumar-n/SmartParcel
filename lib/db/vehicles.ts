@@ -177,3 +177,22 @@ export async function toggleVehicleActive(
 ): Promise<VehicleRow> {
   return updateVehicle(supabase, id, { is_active: isActive });
 }
+
+/**
+ * Update vehicle status — called automatically on trip lifecycle events:
+ *   Trip Dispatch   → IN_TRANSIT
+ *   Trip Arrived    → AVAILABLE
+ *   Trip Cancelled  → AVAILABLE
+ */
+export async function updateVehicleStatus(
+  supabase: AnySupabaseClient,
+  vehicleId: string,
+  status: 'AVAILABLE' | 'IN_TRANSIT' | 'UNDER_MAINTENANCE'
+): Promise<void> {
+  const { error } = await supabase
+    .from('vehicles')
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq('id', vehicleId);
+
+  if (error) throw error;
+}

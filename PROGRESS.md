@@ -7,10 +7,40 @@
 ---
 
 ## Current Phase
-**Phase 1 (v1 MVP Web Admin) — 100% Complete & Verified**
+**Phase 1 (v1 MVP Web Admin) — Bug Fix Sprint (2026-08-23)**
 
 ## Current Status
-🟢 **All 18 Phase 1 features built, tested, and verified. Phase 1.5 plan approved — ready to start Driver Expense Ledger + WhatsApp WATI sprint.**
+🔴 **Phase 1 bug fix sprint in progress.** Lifecycle design reviewed & locked in grill-me session. 10 bugs identified (5 original + 5 implicit). Implementation plan approved — pending execution.
+
+> See [`LIFECYCLE.md`](./LIFECYCLE.md) for the canonical LR state machine, trip lifecycle, and RBAC. This supersedes all previous lifecycle notes in CONTEXT.md.
+
+---
+
+## 🚧 In Progress — Phase 1 Bug Fix Sprint (Session 8 — 2026-08-23)
+
+### Milestone 8: Lifecycle Redesign & Bug Fix Sprint
+
+- [x] **Grill-me session — Lifecycle design locked:**
+  - `PICKED_UP` and `OUT_FOR_DELIVERY` removed from active LR flow.
+  - Simplified LR state machine: `BOOKING_PENDING → BOOKED → IN_TRANSIT → ARRIVED → DELIVERED`.
+  - Trip dispatch atomically moves all assigned BOOKED LRs → IN_TRANSIT + vehicle → IN_TRANSIT.
+  - Trip "Mark Arrived" atomically moves all IN_TRANSIT LRs → ARRIVED + vehicle → AVAILABLE + trip → COMPLETED.
+  - Trip creation auto-assigns all matching BOOKED pool LRs (trip_id IS NULL, same route).
+  - Vehicle = mandatory for dispatch; Driver = optional.
+  - Trip cancel (SCHEDULED): releases LRs to pool. Trip cancel (IN_TRANSIT, Fleet Owner only): reverts LRs to BOOKED + vehicle to AVAILABLE.
+- [x] **Created [`LIFECYCLE.md`](./LIFECYCLE.md)** — permanent canonical lifecycle & flow specification.
+- [x] **Updated [`CONTEXT.md`](./CONTEXT.md)** — Sections 6, 7, 12 updated to match new lifecycle.
+- [ ] **10 bug fixes pending execution:**
+  1. LR action buttons (DropdownMenuTrigger render prop → asChild pattern)
+  2. Pre-existing LRs not assignable to new trips (trip creation must auto-assign pool LRs)
+  3. Dispatch blocked by unloaded LRs (remove PICKED_UP from flow; dispatch = BOOKED → IN_TRANSIT direct)
+  4. Dispatch without vehicle (hard block if vehicle_id IS NULL)
+  5. Hub Manager cannot complete trip (add "Mark Arrived" action)
+  6. Trip creation does not auto-assign matching pool LRs
+  7. Dispatch does not set vehicle → IN_TRANSIT
+  8. No "Mark Arrived" action (trip COMPLETED + LRs ARRIVED + vehicle AVAILABLE)
+  9. Trip cancel (SCHEDULED) does not release LRs
+  10. Trip cancel (IN_TRANSIT) does not revert LRs or free vehicle
 
 ---
 
@@ -97,7 +127,7 @@
 
 Paste this as your opening message in the next chat:
 
-> "Read CONTEXT.md, AGENTS.md, and PROGRESS.md in the SmartParcel workspace at `/Users/nantha/Documents/Projects/SmartParcel`. Phase 1 is 100% complete. We are now starting **Phase 1.5**: Driver Trip Expense Ledger + WhatsApp WATI notifications (web-only sprint, no Flutter). Full plan is in `PHASE_1_5_PLAN.md`. Begin with the DB migrations."
+> "Read CONTEXT.md, AGENTS.md, PROGRESS.md, and **LIFECYCLE.md** in the SmartParcel workspace at `/Users/nantha/Documents/Projects/SmartParcel`. Phase 1 is in a bug-fix sprint (Session 8). The lifecycle has been redesigned — see LIFECYCLE.md. 10 bugs are tracked in PROGRESS.md under Milestone 8. Continue with the implementation plan in the brain artifacts."
 
 
 ### Architecture & Planning

@@ -21,7 +21,9 @@ export const VALID_TRANSITIONS: Record<
     },
   },
   BOOKED: {
-    PICKED_UP: {
+    // Primary path: trip dispatch moves BOOKED → IN_TRANSIT atomically for all assigned LRs.
+    // This rule is also used for per-LR validation inside dispatchTripAction.
+    IN_TRANSIT: {
       allowedRoles: ['fleet_owner', 'hub_manager'],
       requiresHubScope: 'origin',
     },
@@ -30,34 +32,32 @@ export const VALID_TRANSITIONS: Record<
       requiresHubScope: 'origin',
     },
   },
-  PICKED_UP: {
-    IN_TRANSIT: {
-      allowedRoles: ['fleet_owner', 'hub_manager'],
-      requiresHubScope: 'any',
-    },
-  },
+  // PICKED_UP is deprecated — no longer used in the active flow.
+  // Kept as an empty entry so existing DB rows with this status do not throw.
+  PICKED_UP: {},
   IN_TRANSIT: {
+    // Normal path: trip "Mark Arrived" moves all IN_TRANSIT LRs → ARRIVED atomically.
+    // Fleet Owner can also use this as a per-LR override via the LR action menu.
     ARRIVED: {
       allowedRoles: ['fleet_owner', 'hub_manager'],
       requiresHubScope: 'destination',
     },
+    // Only Fleet Owner can cancel an in-transit LR (e.g. truck breakdown).
     CANCELLED: {
       allowedRoles: ['fleet_owner'],
       requiresHubScope: 'none',
     },
   },
   ARRIVED: {
-    OUT_FOR_DELIVERY: {
-      allowedRoles: ['fleet_owner', 'hub_manager'],
-      requiresHubScope: 'destination',
-    },
-  },
-  OUT_FOR_DELIVERY: {
+    // Direct: ARRIVED → DELIVERED (OUT_FOR_DELIVERY step removed per lifecycle redesign).
     DELIVERED: {
       allowedRoles: ['fleet_owner', 'hub_manager'],
       requiresHubScope: 'destination',
     },
   },
+  // OUT_FOR_DELIVERY is deprecated — no longer used in the active flow.
+  // Kept as an empty entry so existing DB rows with this status do not throw.
+  OUT_FOR_DELIVERY: {},
   DELIVERED: {},
   CANCELLED: {},
 };

@@ -6,22 +6,32 @@ import { requireRole, getUserHubIds } from '@/lib/auth/session';
 import { createServerClient } from '@/lib/supabase/server';
 import { createTripSchema, type CreateTripInput } from '@/lib/validations/trip';
 import { insertTrip, getTripById, updateTrip } from '@/lib/db/trips';
-import { getLRById, updateLRStatus, updateLRTrip } from '@/lib/db/lorry-receipts';
-import { insertStatusHistory, insertStatusHistoryBulk } from '@/lib/db/lr-status-history';
+import {
+  getLRById,
+  updateLRTrip,
+  assignPoolLRsToTrip,
+  releaseTripLRs,
+  revertTripLRsToBooked,
+} from '@/lib/db/lorry-receipts';
+import { insertStatusHistoryBulk } from '@/lib/db/lr-status-history';
+import { updateVehicleStatus } from '@/lib/db/vehicles';
 import {
   type ActionResult,
   validationError,
   formError,
   actionSuccess,
   actionSuccessVoid,
-  actionError,
 } from '@/lib/types/action-result';
 import type { LRStatus } from '@/lib/types/lr';
-import { SupabaseClient } from '@supabase/supabase-js';
-import { Database } from '@/lib/types/supabase';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Create Trip
+// ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Server Action to create an ad-hoc Trip.
+ * Creates an ad-hoc trip and auto-assigns all matching BOOKED pool LRs.
+ * Bug 2 + Bug 6: trip creation now auto-slots BOOKED LRs with trip_id IS NULL
+ * that match the route (from_hub_id + to_hub_id).
  */
 export async function createTripAction(
   data: CreateTripInput
@@ -34,16 +44,17 @@ export async function createTripAction(
       return validationError(parsed.error);
     }
 
-    const supabase = createServerClient() as unknown as SupabaseClient<Database>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createServerClient() as any;
 
-    // Enforce hub scope for Hub Managers
+    // Hub Managers can only start trips from their assigned hubs
     if (session.role === 'hub_manager') {
       const assignedHubIds = await getUserHubIds(session.id);
       if (!assignedHubIds.includes(parsed.data.from_hub_id)) {
-        return actionError(
-          'from_hub_id',
-          'You can only start trips from your assigned branch hubs.'
-        );
+        return {
+          success: false,
+          error: { from_hub_id: ['You can only start trips from your assigned branch hubs.'] },
+        };
       }
     }
 
@@ -59,130 +70,107 @@ export async function createTripAction(
       created_by: session.id,
     });
 
+    // Auto-assign all BOOKED pool LRs matching this route to the new trip (Bug 6)
+    await assignPoolLRsToTrip(
+      supabase,
+      newTrip.id,
+      parsed.data.from_hub_id,
+      parsed.data.to_hub_id,
+      session.tenantId
+    );
+
     revalidatePath('/trip-dispatches');
+    revalidatePath('/lorry-receipts');
     revalidatePath('/dashboard');
 
     return actionSuccess({ id: newTrip.id });
   } catch (error: unknown) {
     Sentry.captureException(error);
-    return formError(
-      error instanceof Error ? error.message : 'Failed to create trip.'
-    );
+    return formError(error instanceof Error ? error.message : 'Failed to create trip.');
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Get Available LRs for a trip's route (pool)
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface AvailableLRItem {
+  id: string;
+  lr_number: string | null;
+  consignor_name: string;
+  consignee_name: string;
+  freight_amount: number;
+}
+
 /**
- * Transitions a Lorry Receipt from BOOKED -> PICKED_UP to confirm loading.
+ * Returns BOOKED pool LRs (trip_id IS NULL) matching the trip's route.
+ * Used by the manifest panel's "Available in Pool" section.
  */
-export async function loadLRAction(
-  lrId: string,
+export async function getAvailableLRsAction(
   tripId: string
-): Promise<ActionResult> {
+): Promise<ActionResult<AvailableLRItem[]>> {
   try {
-    const session = await requireRole(['fleet_owner', 'hub_manager']);
-    const supabase = createServerClient() as unknown as SupabaseClient<Database>;
+    await requireRole(['fleet_owner', 'hub_manager']);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createServerClient() as any;
 
-    // 1. Fetch LR to verify current state & origin hub
-    const lr = await getLRById(supabase, lrId);
+    const trip = await getTripById(supabase, tripId);
+    if (!trip) return formError('Trip not found.');
 
-    if (!lr) {
-      return formError('Lorry Receipt not found.');
-    }
+    const { data, error } = await supabase
+      .from('lorry_receipts')
+      .select('id, lr_number, consignor_name, consignee_name, freight_amount')
+      .eq('from_hub_id', trip.from_hub_id)
+      .eq('to_hub_id', trip.to_hub_id)
+      .eq('status', 'BOOKED')
+      .is('trip_id', null)
+      .order('created_at', { ascending: true });
 
-    // 2. Validate user belongs to the origin hub (if hub_manager)
-    if (session.role === 'hub_manager') {
-      const assignedHubIds = await getUserHubIds(session.id);
-      if (!assignedHubIds.includes(lr.from_hub_id)) {
-        return formError('You can only load cargo at your assigned branch hub.');
-      }
-    }
+    if (error) throw error;
 
-    // 3. Confirm transition is BOOKED -> PICKED_UP
-    if (lr.status !== 'BOOKED') {
-      return formError(`Cannot load cargo. LR status is currently ${lr.status}.`);
-    }
-
-    // 4. Update LR status & trip assignment
-    await updateLRTrip(supabase, lrId, tripId);
-    await updateLRStatus(supabase, lrId, 'PICKED_UP');
-
-    // 5. Write history audit trail
-    await insertStatusHistory(supabase, {
-      lr_id: lrId,
-      from_status: 'BOOKED',
-      to_status: 'PICKED_UP',
-      changed_by: session.id,
-      changed_at: new Date().toISOString(),
-      notes: `Loaded onto trip ${tripId}`,
-      tenant_id: session.tenantId,
-    });
-
-    revalidatePath('/trip-dispatches');
-    revalidatePath('/lorry-receipts');
-
-    return actionSuccessVoid();
+    return actionSuccess((data as AvailableLRItem[]) ?? []);
   } catch (error: unknown) {
     Sentry.captureException(error);
-    return formError(
-      error instanceof Error ? error.message : 'Failed to load cargo.'
-    );
+    return formError(error instanceof Error ? error.message : 'Failed to load available LRs.');
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Assign LR to trip manifest
+// ─────────────────────────────────────────────────────────────────────────────
+
 /**
- * Bulk loads all BOOKED LRs assigned to a trip.
+ * Assigns a single BOOKED pool LR to a SCHEDULED trip's manifest.
+ * Used in the manifest panel "Add to trip" button.
  */
-export async function loadAllLRsAction(
+export async function assignLRToTripAction(
+  lrId: string,
   tripId: string
-): Promise<ActionResult> {
+): Promise<ActionResult<void>> {
   try {
     const session = await requireRole(['fleet_owner', 'hub_manager']);
-    const supabase = createServerClient() as unknown as SupabaseClient<Database>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createServerClient() as any;
 
-    // 1. Fetch trip and its LRs
-    const trip = await getTripById(supabase, tripId);
-    if (!trip) {
-      return formError('Trip not found.');
-    }
+    const [lr, trip] = await Promise.all([
+      getLRById(supabase, lrId),
+      getTripById(supabase, tripId),
+    ]);
 
-    // Hub manager permission check
+    if (!lr) return formError('Lorry Receipt not found.');
+    if (!trip) return formError('Trip not found.');
+    if (trip.status !== 'SCHEDULED') return formError('Can only assign LRs to a SCHEDULED trip.');
+    if (lr.status !== 'BOOKED') return formError('Only BOOKED LRs can be assigned to a trip.');
+    if (lr.trip_id !== null) return formError('This LR is already assigned to a trip.');
+
     if (session.role === 'hub_manager') {
       const assignedHubIds = await getUserHubIds(session.id);
       if (!assignedHubIds.includes(trip.from_hub_id)) {
-        return formError('You can only load cargo for trips starting from your assigned hubs.');
+        return formError('You can only manage manifests for trips departing from your assigned hubs.');
       }
     }
 
-    const bookedLRs = trip.lorry_receipts.filter((lr) => lr.status === 'BOOKED');
-    if (bookedLRs.length === 0) {
-      return actionSuccessVoid();
-    }
-
-    // 2. Perform updates
-    const lrIds = bookedLRs.map((l) => l.id);
-    
-    // Bulk update LR statuses to PICKED_UP
-    const { error: updateError } = await supabase
-      .from('lorry_receipts')
-      .update({ status: 'PICKED_UP', updated_at: new Date().toISOString() })
-      .in('id', lrIds);
-
-    if (updateError) {
-      return formError('Failed to bulk load LRs.');
-    }
-
-    // 3. Log status history rows
-    const historyRows = lrIds.map((id) => ({
-      lr_id: id,
-      from_status: 'BOOKED' as LRStatus,
-      to_status: 'PICKED_UP' as LRStatus,
-      changed_by: session.id,
-      changed_at: new Date().toISOString(),
-      notes: `Bulk loaded onto trip ${tripId}`,
-      tenant_id: session.tenantId,
-    }));
-
-    await insertStatusHistoryBulk(supabase, historyRows);
+    await updateLRTrip(supabase, lrId, tripId);
 
     revalidatePath('/trip-dispatches');
     revalidatePath('/lorry-receipts');
@@ -190,29 +178,80 @@ export async function loadAllLRsAction(
     return actionSuccessVoid();
   } catch (error: unknown) {
     Sentry.captureException(error);
-    return formError(
-      error instanceof Error ? error.message : 'Failed to bulk load cargo.'
-    );
+    return formError(error instanceof Error ? error.message : 'Failed to assign LR to trip.');
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Remove LR from trip manifest
+// ─────────────────────────────────────────────────────────────────────────────
+
 /**
- * Dispatches the trip, updating both trip status and all its PICKED_UP LRs to IN_TRANSIT.
+ * Removes a BOOKED LR from a SCHEDULED trip's manifest, returning it to the pool.
+ * Used in the manifest panel "Remove" (−) button.
  */
-export async function dispatchTripAction(
+export async function removeLRFromTripAction(
+  lrId: string,
   tripId: string
-): Promise<ActionResult> {
+): Promise<ActionResult<void>> {
   try {
     const session = await requireRole(['fleet_owner', 'hub_manager']);
-    const supabase = createServerClient() as unknown as SupabaseClient<Database>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createServerClient() as any;
 
-    // 1. Fetch the trip and its LRs
-    const trip = await getTripById(supabase, tripId);
-    if (!trip) {
-      return formError('Trip not found.');
+    const [lr, trip] = await Promise.all([
+      getLRById(supabase, lrId),
+      getTripById(supabase, tripId),
+    ]);
+
+    if (!lr) return formError('Lorry Receipt not found.');
+    if (!trip) return formError('Trip not found.');
+    if (trip.status !== 'SCHEDULED') return formError('Cannot remove LRs from a trip that is already dispatched.');
+    if (lr.status !== 'BOOKED') return formError('Only BOOKED LRs can be removed from a trip manifest.');
+
+    if (session.role === 'hub_manager') {
+      const assignedHubIds = await getUserHubIds(session.id);
+      if (!assignedHubIds.includes(trip.from_hub_id)) {
+        return formError('You can only manage manifests for trips departing from your assigned hubs.');
+      }
     }
 
-    // Hub manager permission check
+    await updateLRTrip(supabase, lrId, null);
+
+    revalidatePath('/trip-dispatches');
+    revalidatePath('/lorry-receipts');
+
+    return actionSuccessVoid();
+  } catch (error: unknown) {
+    Sentry.captureException(error);
+    return formError(error instanceof Error ? error.message : 'Failed to remove LR from trip.');
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Dispatch Trip (SCHEDULED → IN_TRANSIT)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Dispatches the trip:
+ *  - Bug 4: Vehicle must be assigned (hard block if missing)
+ *  - Bug 3: All assigned BOOKED LRs → IN_TRANSIT atomically (PICKED_UP step removed)
+ *  - Bug 7: Vehicle status → IN_TRANSIT automatically
+ */
+export async function dispatchTripAction(tripId: string): Promise<ActionResult<void>> {
+  try {
+    const session = await requireRole(['fleet_owner', 'hub_manager']);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createServerClient() as any;
+
+    const trip = await getTripById(supabase, tripId);
+    if (!trip) return formError('Trip not found.');
+
+    if (trip.status !== 'SCHEDULED') {
+      return formError(`Cannot dispatch trip. Current status is ${trip.status}.`);
+    }
+
+    // Hub manager must be at origin hub
     if (session.role === 'hub_manager') {
       const assignedHubIds = await getUserHubIds(session.id);
       if (!assignedHubIds.includes(trip.from_hub_id)) {
@@ -220,59 +259,46 @@ export async function dispatchTripAction(
       }
     }
 
-    if (trip.status !== 'SCHEDULED') {
-      return formError(`Cannot dispatch trip. Status is currently ${trip.status}.`);
+    // Bug 4: Vehicle is mandatory
+    if (!trip.vehicle_id) {
+      return formError('A vehicle must be assigned to this trip before it can be dispatched.');
     }
 
-    // 2. Fetch assigned LRs and check statuses
-    const lrs = trip.lorry_receipts;
-    if (lrs.length === 0) {
-      return formError('Cannot dispatch an empty trip. Assign and load lorry receipts first.');
+    // Bug 3: Dispatch all assigned BOOKED LRs
+    const bookedLRs = trip.lorry_receipts.filter((lr) => lr.status === 'BOOKED');
+    if (bookedLRs.length === 0) {
+      return formError('No BOOKED Lorry Receipts are assigned to this trip. Add at least one LR to the manifest before dispatching.');
     }
 
-    // Check if there are any BOOKED LRs that haven't been marked as PICKED_UP yet
-    const bookedCount = lrs.filter((lr) => lr.status === 'BOOKED').length;
-    if (bookedCount > 0) {
-      return formError(
-        `There are ${bookedCount} un-loaded Lorry Receipt(s) on this run. Load them first.`
-      );
-    }
+    const bookedIds = bookedLRs.map((l) => l.id);
 
-    const pickedUpLRs = lrs.filter((lr) => lr.status === 'PICKED_UP');
-    if (pickedUpLRs.length === 0) {
-      return formError('Confirm that cargo is loaded (PICKED_UP) before dispatching.');
-    }
-
-    // 3. Atomically transition LRs to IN_TRANSIT
-    const pickedUpIds = pickedUpLRs.map((l) => l.id);
+    // Atomically transition all BOOKED → IN_TRANSIT
     const { error: lrUpdateError } = await supabase
       .from('lorry_receipts')
       .update({ status: 'IN_TRANSIT', updated_at: new Date().toISOString() })
-      .in('id', pickedUpIds);
+      .in('id', bookedIds);
 
-    if (lrUpdateError) {
-      return formError('Failed to transition LRs to IN_TRANSIT.');
-    }
+    if (lrUpdateError) throw lrUpdateError;
 
-    // 4. Create history rows for LRs
-    const historyRows = pickedUpIds.map((id) => ({
+    // Write immutable audit history for each LR
+    await insertStatusHistoryBulk(supabase, bookedIds.map((id) => ({
       lr_id: id,
-      from_status: 'PICKED_UP' as LRStatus,
+      from_status: 'BOOKED' as LRStatus,
       to_status: 'IN_TRANSIT' as LRStatus,
       changed_by: session.id,
       changed_at: new Date().toISOString(),
       notes: `Dispatched on trip ${tripId}`,
       tenant_id: session.tenantId,
-    }));
+    })));
 
-    await insertStatusHistoryBulk(supabase, historyRows);
-
-    // 5. Update Trip status to IN_TRANSIT
+    // Update trip status → IN_TRANSIT
     await updateTrip(supabase, tripId, {
       status: 'IN_TRANSIT',
       dispatched_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
     });
+
+    // Bug 7: Vehicle → IN_TRANSIT automatically
+    await updateVehicleStatus(supabase, trip.vehicle_id, 'IN_TRANSIT');
 
     revalidatePath('/trip-dispatches');
     revalidatePath('/lorry-receipts');
@@ -281,8 +307,173 @@ export async function dispatchTripAction(
     return actionSuccessVoid();
   } catch (error: unknown) {
     Sentry.captureException(error);
-    return formError(
-      error instanceof Error ? error.message : 'Failed to dispatch trip.'
-    );
+    return formError(error instanceof Error ? error.message : 'Failed to dispatch trip.');
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Mark Trip Arrived (IN_TRANSIT → COMPLETED)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Marks a trip as arrived at the destination:
+ *  - Bug 5 + 8: closes the trip (COMPLETED)
+ *  - All IN_TRANSIT LRs on the trip → ARRIVED atomically
+ *  - Vehicle → AVAILABLE automatically
+ *  - Restricted to destination Hub Manager or Fleet Owner
+ */
+export async function markTripArrivedAction(tripId: string): Promise<ActionResult<void>> {
+  try {
+    const session = await requireRole(['fleet_owner', 'hub_manager']);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createServerClient() as any;
+
+    const trip = await getTripById(supabase, tripId);
+    if (!trip) return formError('Trip not found.');
+
+    if (trip.status !== 'IN_TRANSIT') {
+      return formError(`Cannot mark as arrived. Current status is ${trip.status}.`);
+    }
+
+    // Hub Manager must be at the destination hub
+    if (session.role === 'hub_manager') {
+      const assignedHubIds = await getUserHubIds(session.id);
+      if (!assignedHubIds.includes(trip.to_hub_id)) {
+        return formError('You can only mark trips as arrived at your assigned destination hub.');
+      }
+    }
+
+    const inTransitLRs = trip.lorry_receipts.filter((lr) => lr.status === 'IN_TRANSIT');
+
+    if (inTransitLRs.length > 0) {
+      const inTransitIds = inTransitLRs.map((l) => l.id);
+
+      // Atomically move all IN_TRANSIT LRs → ARRIVED
+      const { error: lrUpdateError } = await supabase
+        .from('lorry_receipts')
+        .update({ status: 'ARRIVED', updated_at: new Date().toISOString() })
+        .in('id', inTransitIds);
+
+      if (lrUpdateError) throw lrUpdateError;
+
+      // Write audit history for each LR
+      await insertStatusHistoryBulk(supabase, inTransitIds.map((id) => ({
+        lr_id: id,
+        from_status: 'IN_TRANSIT' as LRStatus,
+        to_status: 'ARRIVED' as LRStatus,
+        changed_by: session.id,
+        changed_at: new Date().toISOString(),
+        notes: 'Trip arrived at destination hub',
+        tenant_id: session.tenantId,
+      })));
+    }
+
+    // Mark trip COMPLETED with timestamp
+    await updateTrip(supabase, tripId, {
+      status: 'COMPLETED',
+      completed_at: new Date().toISOString(),
+    });
+
+    // Vehicle → AVAILABLE
+    if (trip.vehicle_id) {
+      await updateVehicleStatus(supabase, trip.vehicle_id, 'AVAILABLE');
+    }
+
+    revalidatePath('/trip-dispatches');
+    revalidatePath('/lorry-receipts');
+    revalidatePath('/dashboard');
+
+    return actionSuccessVoid();
+  } catch (error: unknown) {
+    Sentry.captureException(error);
+    return formError(error instanceof Error ? error.message : 'Failed to mark trip as arrived.');
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Cancel Trip
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Cancels a trip with correct lifecycle side effects:
+ *
+ * SCHEDULED (Fleet Owner or origin Hub Manager):
+ *   → All assigned BOOKED LRs released to pool (trip_id = NULL, status stays BOOKED)
+ *   → Trip → CANCELLED
+ *
+ * IN_TRANSIT (Fleet Owner only):
+ *   → All IN_TRANSIT LRs reverted → BOOKED + trip_id = NULL
+ *   → Vehicle → AVAILABLE
+ *   → Trip → CANCELLED
+ *
+ * Bugs 9 + 10
+ */
+export async function cancelTripAction(tripId: string): Promise<ActionResult<void>> {
+  try {
+    const session = await requireRole(['fleet_owner', 'hub_manager']);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createServerClient() as any;
+
+    const trip = await getTripById(supabase, tripId);
+    if (!trip) return formError('Trip not found.');
+
+    if (trip.status === 'COMPLETED' || trip.status === 'CANCELLED') {
+      return formError(`Cannot cancel a trip that is already ${trip.status}.`);
+    }
+
+    if (session.role === 'hub_manager') {
+      if (trip.status === 'IN_TRANSIT') {
+        return formError('Only a Fleet Owner can cancel a trip that is already in transit.');
+      }
+      const assignedHubIds = await getUserHubIds(session.id);
+      if (!assignedHubIds.includes(trip.from_hub_id)) {
+        return formError('You can only cancel trips departing from your assigned hubs.');
+      }
+    }
+
+    if (trip.status === 'SCHEDULED') {
+      // Release all assigned BOOKED LRs back to pool
+      await releaseTripLRs(supabase, tripId);
+    } else if (trip.status === 'IN_TRANSIT') {
+      // Revert all IN_TRANSIT LRs → BOOKED + release to pool
+      const revertedIds = await revertTripLRsToBooked(supabase, tripId);
+
+      if (revertedIds.length > 0) {
+        await insertStatusHistoryBulk(supabase, revertedIds.map((id) => ({
+          lr_id: id,
+          from_status: 'IN_TRANSIT' as LRStatus,
+          to_status: 'BOOKED' as LRStatus,
+          changed_by: session.id,
+          changed_at: new Date().toISOString(),
+          notes: `Trip ${tripId} cancelled — LR returned to booking pool`,
+          tenant_id: session.tenantId,
+        })));
+      }
+
+      // Release the vehicle
+      if (trip.vehicle_id) {
+        await updateVehicleStatus(supabase, trip.vehicle_id, 'AVAILABLE');
+      }
+    }
+
+    await updateTrip(supabase, tripId, { status: 'CANCELLED' });
+
+    revalidatePath('/trip-dispatches');
+    revalidatePath('/lorry-receipts');
+    revalidatePath('/dashboard');
+
+    return actionSuccessVoid();
+  } catch (error: unknown) {
+    Sentry.captureException(error);
+    return formError(error instanceof Error ? error.message : 'Failed to cancel trip.');
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Legacy alias kept for backwards compatibility
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** @deprecated Use assignLRToTripAction */
+export async function loadLRAction(lrId: string, tripId: string): Promise<ActionResult<void>> {
+  return assignLRToTripAction(lrId, tripId);
 }
