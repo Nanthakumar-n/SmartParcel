@@ -7,16 +7,21 @@
 ---
 
 ## Current Phase
-**Phase 1 (v1 MVP Web Admin) — Bug Fix Sprint (2026-08-23)**
+**Phase 1 (v1 MVP Web Admin) — ✅ Phase 1 Complete & Verified (2026-08-26)**
 
 ## Current Status
-🔴 **Phase 1 bug fix sprint in progress.** Lifecycle design reviewed & locked in grill-me session. 10 bugs identified (5 original + 5 implicit). Implementation plan approved — pending execution.
+🟢 **Phase 1 complete & verified.** All Phase 1 bugs resolved, tested, and pushed to GitHub:
+- Fleet assignment for scheduled trips (inline in manifest panel & ad-hoc dialog).
+- Origin-based vehicle availability & location validation.
+- Route card layout & text wrapping fix in manifest panel.
+- LR three-dots action dropdown menus fixed (ref-forwarding & menu group label fix).
+- Verified via browser subagent across desktop (1440×900) and mobile (375×812).
 
-> See [`LIFECYCLE.md`](./LIFECYCLE.md) for the canonical LR state machine, trip lifecycle, and RBAC. This supersedes all previous lifecycle notes in CONTEXT.md.
+> Next Phase: **Phase 1.5 (Web-only)** — Driver Trip Expense Ledger, WhatsApp Notifications via WATI, Tenant Settings page.
 
 ---
 
-## 🚧 In Progress — Phase 1 Bug Fix Sprint (Session 8 — 2026-08-23)
+## 🚧 Completed — Phase 1 Bug Fix Sprint (Session 8 & 8.1 — 2026-08-26)
 
 ### Milestone 8: Lifecycle Redesign & Bug Fix Sprint
 
@@ -36,6 +41,11 @@
   - Added interactive "Assign / Change Fleet" selector inside `manifest-panel.tsx` for `SCHEDULED` trips.
   - Enhanced `trip-dialog.tsx` to dynamically query and display available vehicles situated at the selected origin hub with default driver auto-fill.
   - Fixed Route box text overflow in `manifest-panel.tsx` with responsive 3-column layout (`col-span-2`, `flex-wrap`, `min-w-0`, `break-words`).
+- [x] **LR Actions Dropdown Menu Fix:**
+  - Added `React.forwardRef` to `components/ui/button.tsx` so `@base-ui/react` Floating UI anchor correctly receives DOM element references for accurate popup positioning.
+  - Updated `DropdownMenuLabel` in `components/ui/dropdown-menu.tsx` to eliminate `MenuGroupContext` runtime errors.
+  - Refactored `LRThermalDialog` to support controlled `open` / `onOpenChange` props without rendering duplicate triggers.
+- [x] **Skill Learning:** Updated `automated-ui-verification` skill with strict subagent tool and sandbox boundaries.
 
 ---
 
