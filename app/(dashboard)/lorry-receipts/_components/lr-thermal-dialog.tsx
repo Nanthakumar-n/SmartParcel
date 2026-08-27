@@ -19,7 +19,9 @@ import type { LRDetailed } from '@/lib/db/lorry-receipts';
 interface LRThermalDialogProps {
   lr: LRDetailed;
   tenantName?: string;
-  trigger?: React.ReactElement;
+  trigger?: React.ReactElement | null;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   defaultOpen?: boolean;
 }
 
@@ -27,9 +29,20 @@ export function LRThermalDialog({
   lr,
   tenantName = 'SmartParcel Logistics',
   trigger,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
   defaultOpen = false,
 }: LRThermalDialogProps) {
-  const [open, setOpen] = React.useState(defaultOpen);
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(defaultOpen);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : uncontrolledOpen;
+  const setOpen = (val: boolean) => {
+    if (isControlled) {
+      controlledOnOpenChange?.(val);
+    } else {
+      setUncontrolledOpen(val);
+    }
+  };
   const receiptRef = useRef<HTMLDivElement>(null);
 
   const handlePrint = () => {
@@ -38,22 +51,7 @@ export function LRThermalDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      {trigger ? (
-        <DialogTrigger render={trigger} />
-      ) : (
-        <DialogTrigger
-          render={
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-xs flex items-center gap-1.5 hover:bg-slate-50"
-            >
-              <Printer className="h-3.5 w-3.5 text-slate-500" />
-              <span>Thermal Bill (3&quot;)</span>
-            </Button>
-          }
-        />
-      )}
+      {trigger && <DialogTrigger render={trigger} />}
 
       <DialogContent className="sm:max-w-[420px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>

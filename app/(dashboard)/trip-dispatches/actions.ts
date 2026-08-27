@@ -14,7 +14,8 @@ import {
   revertTripLRsToBooked,
 } from '@/lib/db/lorry-receipts';
 import { insertStatusHistoryBulk } from '@/lib/db/lr-status-history';
-import { updateVehicleStatus } from '@/lib/db/vehicles';
+import { updateVehicleStatus, getAvailableVehiclesForOrigin, type AvailableVehicleOption } from '@/lib/db/vehicles';
+import { getDriversByTenant, type DriverRow } from '@/lib/db/drivers';
 import {
   type ActionResult,
   validationError,
@@ -470,6 +471,110 @@ export async function cancelTripAction(tripId: string): Promise<ActionResult<voi
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Get Available Fleet for a Trip's Origin Hub
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface AvailableFleetData {
+  vehicles: AvailableVehicleOption[];
+  drivers: DriverRow[];
+}
+
+/**
+ * Returns available vehicles (at origin hub) and active drivers.
+ * Used by ManifestPanel and TripDialog.
+ */
+export async function getAvailableFleetAction(
+  fromHubId: string,
+  currentTripId?: string,
+  currentVehicleId?: string
+): Promise<ActionResult<AvailableFleetData>> {
+  try {
+    await requireRole(['fleet_owner', 'hub_manager']);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createServerClient() as any;
+
+    const [vehicles, driversResult] = await Promise.all([
+      getAvailableVehiclesForOrigin(supabase, fromHubId, currentTripId, currentVehicleId),
+      getDriversByTenant(supabase, { isActive: true, pageSize: 100 }),
+    ]);
+
+    return actionSuccess({
+      vehicles,
+      drivers: driversResult.data,
+    });
+  } catch (error: unknown) {
+    Sentry.captureException(error);
+    return formError(error instanceof Error ? error.message : 'Failed to load fleet options.');
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Assign or Change Vehicle and Driver on a SCHEDULED Trip
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Assigns or updates the vehicle and/or driver on a SCHEDULED trip.
+ * Validates vehicle is available and at the trip's origin hub.
+ */
+export async function assignVehicleAndDriverAction(
+  tripId: string,
+  vehicleId: string | null,
+  driverId: string | null
+): Promise<ActionResult<void>> {
+  try {
+    const session = await requireRole(['fleet_owner', 'hub_manager']);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const supabase = createServerClient() as any;
+
+    const trip = await getTripById(supabase, tripId);
+    if (!trip) return formError('Trip not found.');
+
+    if (trip.status !== 'SCHEDULED') {
+      return formError(`Cannot modify fleet assignment for a trip with status ${trip.status}.`);
+    }
+
+    if (session.role === 'hub_manager') {
+      const assignedHubIds = await getUserHubIds(session.id);
+      if (!assignedHubIds.includes(trip.from_hub_id)) {
+        return formError('You can only manage fleet assignments for trips departing from your assigned hubs.');
+      }
+    }
+
+    // If a vehicle is specified, validate it
+    if (vehicleId) {
+      const availableVehicles = await getAvailableVehiclesForOrigin(
+        supabase,
+        trip.from_hub_id,
+        trip.id,
+        trip.vehicle_id || undefined
+      );
+
+      const isMatch = availableVehicles.some((v) => v.id === vehicleId);
+      if (!isMatch) {
+        return formError(
+          'Selected vehicle is either not available or not currently situated at this origin hub.'
+        );
+      }
+    }
+
+    // Update trip with new vehicle and driver
+    await updateTrip(supabase, tripId, {
+      vehicle_id: vehicleId,
+      driver_id: driverId,
+    });
+
+    revalidatePath('/trip-dispatches');
+    revalidatePath('/lorry-receipts');
+    revalidatePath('/dashboard');
+
+    return actionSuccessVoid();
+  } catch (error: unknown) {
+    Sentry.captureException(error);
+    return formError(error instanceof Error ? error.message : 'Failed to assign vehicle and driver.');
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Legacy alias kept for backwards compatibility
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -477,3 +582,4 @@ export async function cancelTripAction(tripId: string): Promise<ActionResult<voi
 export async function loadLRAction(lrId: string, tripId: string): Promise<ActionResult<void>> {
   return assignLRToTripAction(lrId, tripId);
 }
+

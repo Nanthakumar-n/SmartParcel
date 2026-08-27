@@ -198,11 +198,15 @@ npm run build
 > ⛔ Do NOT mark a bug as fixed unless all three commands pass with 0 errors.
 > A TypeScript or lint error introduced by the fix is itself a regression.
 
-### 4b. Run the `automated-ui-verification` skill
-- Navigate to the affected page using the browser sub-agent.
-- Reproduce the exact original steps-to-reproduce — confirm the bug is gone.
-- Capture a screenshot at 1440×900 (desktop) and 375×812 (mobile).
-- Verify no horizontal scroll introduced on mobile.
+### 4b. Run the `automated-ui-verification` skill only after user approval
+
+> ⚠️ **DO NOT run UI verification unless the user explicitly approves it.**
+
+- Only after the user says "Run UI verification" or similar, then:
+  - Navigate to the affected page using the browser sub-agent.
+  - Reproduce the exact original steps-to-reproduce — confirm the bug is gone.
+  - Capture a screenshot at 1440×900 (desktop) and 375×812 (mobile).
+  - Verify no horizontal scroll introduced on mobile.
 
 ### 4c. Regression checks for the specific bug class
 

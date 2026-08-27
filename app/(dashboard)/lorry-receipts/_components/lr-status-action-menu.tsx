@@ -220,7 +220,8 @@ export function LRStatusActionMenu({ lr, userRole, tenantName }: LRStatusActionM
       <LRThermalDialog
         lr={lr}
         tenantName={tenantName}
-        defaultOpen={thermalDialogOpen}
+        open={thermalDialogOpen}
+        onOpenChange={setThermalDialogOpen}
       />
 
       {/* Cancel Confirmation Dialog */}

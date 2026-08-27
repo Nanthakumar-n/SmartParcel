@@ -30,17 +30,12 @@
   - Trip cancel (SCHEDULED): releases LRs to pool. Trip cancel (IN_TRANSIT, Fleet Owner only): reverts LRs to BOOKED + vehicle to AVAILABLE.
 - [x] **Created [`LIFECYCLE.md`](./LIFECYCLE.md)** — permanent canonical lifecycle & flow specification.
 - [x] **Updated [`CONTEXT.md`](./CONTEXT.md)** — Sections 6, 7, 12 updated to match new lifecycle.
-- [ ] **10 bug fixes pending execution:**
-  1. LR action buttons (DropdownMenuTrigger render prop → asChild pattern)
-  2. Pre-existing LRs not assignable to new trips (trip creation must auto-assign pool LRs)
-  3. Dispatch blocked by unloaded LRs (remove PICKED_UP from flow; dispatch = BOOKED → IN_TRANSIT direct)
-  4. Dispatch without vehicle (hard block if vehicle_id IS NULL)
-  5. Hub Manager cannot complete trip (add "Mark Arrived" action)
-  6. Trip creation does not auto-assign matching pool LRs
-  7. Dispatch does not set vehicle → IN_TRANSIT
-  8. No "Mark Arrived" action (trip COMPLETED + LRs ARRIVED + vehicle AVAILABLE)
-  9. Trip cancel (SCHEDULED) does not release LRs
-  10. Trip cancel (IN_TRANSIT) does not revert LRs or free vehicle
+- [x] **Fleet Assignment & UI Wrap Fixes (Session 8.1 — 2026-08-26):**
+  - Added `getAvailableVehiclesForOrigin` helper in `lib/db/vehicles.ts` to locate and filter available vehicles located at a trip's origin hub (or brand new fleet vehicles).
+  - Added `getAvailableFleetAction` and `assignVehicleAndDriverAction` in `app/(dashboard)/trip-dispatches/actions.ts`.
+  - Added interactive "Assign / Change Fleet" selector inside `manifest-panel.tsx` for `SCHEDULED` trips.
+  - Enhanced `trip-dialog.tsx` to dynamically query and display available vehicles situated at the selected origin hub with default driver auto-fill.
+  - Fixed Route box text overflow in `manifest-panel.tsx` with responsive 3-column layout (`col-span-2`, `flex-wrap`, `min-w-0`, `break-words`).
 
 ---
 

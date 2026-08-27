@@ -26,9 +26,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { createTripSchema, type CreateTripInput } from '@/lib/validations/trip';
-import { createTripAction } from '../actions';
+import { createTripAction, getAvailableFleetAction } from '../actions';
 import type { HubRow } from '@/lib/db/hubs';
-import type { VehicleWithDriver } from '@/lib/db/vehicles';
+import type { VehicleWithDriver, AvailableVehicleOption } from '@/lib/db/vehicles';
 import type { DriverRow } from '@/lib/db/drivers';
 
 interface TripDialogProps {
@@ -37,11 +37,12 @@ interface TripDialogProps {
   drivers: DriverRow[];
 }
 
-export function TripDialog({ hubs, vehicles, drivers }: TripDialogProps) {
+export function TripDialog({ hubs, drivers }: TripDialogProps) {
   const [open, setOpen] = useState(false);
+  const [availableVehicles, setAvailableVehicles] = useState<AvailableVehicleOption[]>([]);
+  const [isLoadingVehicles, setIsLoadingVehicles] = useState(false);
 
   const activeHubs = hubs.filter((h) => h.is_active);
-  const activeVehicles = vehicles.filter((v) => v.is_active);
   const activeDrivers = drivers.filter((d) => d.is_active);
 
   const {
@@ -49,6 +50,7 @@ export function TripDialog({ hubs, vehicles, drivers }: TripDialogProps) {
     handleSubmit,
     control,
     watch,
+    setValue,
     reset,
     setError,
     formState: { errors, isSubmitting },
@@ -66,6 +68,25 @@ export function TripDialog({ hubs, vehicles, drivers }: TripDialogProps) {
 
   const selectedFromHub = watch('from_hub_id');
   const destinationHubs = activeHubs.filter((h) => h.id !== selectedFromHub);
+
+  // Fetch available vehicles whenever origin hub changes
+  React.useEffect(() => {
+    if (!selectedFromHub) {
+      setAvailableVehicles([]);
+      return;
+    }
+    setIsLoadingVehicles(true);
+    getAvailableFleetAction(selectedFromHub)
+      .then((res) => {
+        if (res.success) {
+          setAvailableVehicles(res.data.vehicles);
+        }
+      })
+      .catch(() => {
+        // silent
+      })
+      .finally(() => setIsLoadingVehicles(false));
+  }, [selectedFromHub]);
 
   const onSubmit = async (data: CreateTripInput) => {
     try {
@@ -217,24 +238,51 @@ export function TripDialog({ hubs, vehicles, drivers }: TripDialogProps) {
                 render={({ field }) => (
                   <Select
                     value={field.value}
-                    onValueChange={(val) => field.onChange(val ?? '')}
-                    disabled={isSubmitting}
+                    onValueChange={(val) => {
+                      const chosenVal = val ?? '';
+                      field.onChange(chosenVal);
+                      if (chosenVal) {
+                        const chosen = availableVehicles.find((v) => v.id === chosenVal);
+                        if (chosen?.default_driver_id && !watch('driver_id')) {
+                          setValue('driver_id', chosen.default_driver_id);
+                        }
+                      }
+                    }}
+                    disabled={isSubmitting || !selectedFromHub || isLoadingVehicles}
                   >
                     <SelectTrigger className="text-xs h-9">
                       {(() => {
-                        const v = activeVehicles.find((vh) => vh.id === field.value);
+                        if (!selectedFromHub) {
+                          return <span className="text-slate-400">Select origin hub first</span>;
+                        }
+                        if (isLoadingVehicles) {
+                          return (
+                            <span className="flex items-center text-slate-400">
+                              <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> Loading vehicles...
+                            </span>
+                          );
+                        }
+                        const v = availableVehicles.find((vh) => vh.id === field.value);
                         return v ? (
                           <span className="font-semibold">{v.registration_number}</span>
                         ) : <SelectValue placeholder="Select vehicle" />;
                       })()}
                     </SelectTrigger>
                     <SelectContent>
-                      {activeVehicles.map((v) => (
-                        <SelectItem key={v.id} value={v.id} className="text-xs">
-                          <span className="font-mono font-semibold mr-2">{v.registration_number}</span>
-                          <span className="text-slate-400">({v.vehicle_type} - {v.capacity_tonnes}T)</span>
-                        </SelectItem>
-                      ))}
+                      {availableVehicles.length === 0 ? (
+                        <div className="p-2 text-center text-xs text-slate-400">
+                          No available vehicles currently at this hub.
+                        </div>
+                      ) : (
+                        availableVehicles.map((v) => (
+                          <SelectItem key={v.id} value={v.id} className="text-xs">
+                            <div className="flex items-center justify-between w-full gap-2">
+                              <span className="font-mono font-semibold">{v.registration_number}</span>
+                              <span className="text-slate-400">({v.vehicle_type} - {v.capacity_tonnes}T)</span>
+                            </div>
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 )}

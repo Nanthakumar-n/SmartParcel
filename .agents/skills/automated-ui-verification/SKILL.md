@@ -58,6 +58,20 @@ To prevent the browser subagent from getting stuck in repetitive retry loops whe
 
 ---
 
+## 🚫 Sub-Agent Tool & Sandbox Boundaries (Strict Rule)
+
+The browser subagent runs inside an isolated browser sandbox with restricted tool capabilities:
+
+1. **Browser Tools ONLY**:
+   - Use exclusively: `open_browser_url`, `click_browser_pixel`, `type_browser_text`, `browser_get_dom`, `capture_browser_screenshot`, `browser_press_key`, and `wait`.
+2. **NO Filesystem Tools**:
+   - Never invoke `view_file`, `replace_file_content`, `write_to_file`, or attempt to create/read scratchpads (`scratchpad.md`, `scratchpad.json`). Filesystem operations outside the browser sandbox will fail and trigger error cascades.
+3. **Linear, Single-Pass Instructions**:
+   - Keep task descriptions linear and step-by-step.
+   - Explicitly instruct the subagent: *"Do not attempt to read local files. Perform the browser action, capture the screenshot, and terminate immediately."*
+
+---
+
 ## Instructions
 
 ### When to Trigger
@@ -74,6 +88,7 @@ Activate this skill after completing any of the following:
 2. **Spin up the browser sub-agent** using the `browser_subagent` tool with clear, finite instructions:
    - Navigate to the target page URL (e.g., `http://localhost:3000/dashboard`).
    - **Verify CSS integrity**: Confirm styles, colors, and layout are rendered (not unstyled HTML).
+   - **Include sandbox boundaries**: Instruct the subagent to use only browser interaction tools and avoid filesystem tools.
    - Capture a **desktop screenshot** at viewport `1440 x 900`.
    - Resize to **mobile viewport** `375 x 812` and capture another screenshot.
    - Interact with key UI elements (open forms, fill fields, submit).
@@ -115,9 +130,10 @@ Activate this skill after completing any of the following:
 ```
 Navigate to http://localhost:3000/<page>.
 1. Verify CSS & styling: Ensure the page is styled with Tailwind CSS (not raw unstyled HTML).
-2. Viewport: Set to desktop 1440x900 and capture screenshot.
-3. Viewport: Set to mobile 375x812 and capture screenshot.
-4. Perform the requested interaction (e.g. fill form and submit).
-5. FAIL-FAST RULE: If any error message appears or submission fails, retry at most 2 times. If it fails on the 2nd try, stop immediately, take a screenshot of the error, and return the error text. Do not continue trying.
-6. On success: verify expected destination page elements and return confirmation.
+2. Tool constraint: Use ONLY browser tools (open_browser_url, click_browser_pixel, type_browser_text, browser_get_dom, capture_browser_screenshot). NEVER attempt filesystem operations or scratchpad files.
+3. Viewport: Set to desktop 1440x900 and capture screenshot.
+4. Viewport: Set to mobile 375x812 and capture screenshot.
+5. Perform the requested interaction (e.g. fill form and submit).
+6. FAIL-FAST RULE: If any error message appears or submission fails, retry at most 2 times. If it fails on the 2nd try, stop immediately, take a screenshot of the error, and return the error text. Do not continue trying.
+7. On success: capture screenshot and finish immediately.
 ```

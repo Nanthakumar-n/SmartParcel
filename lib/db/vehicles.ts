@@ -196,3 +196,151 @@ export async function updateVehicleStatus(
 
   if (error) throw error;
 }
+
+export interface AvailableVehicleOption extends VehicleWithDriver {
+  currentLocationHub?: {
+    id: string;
+    hub_code: string;
+    city: string;
+  } | null;
+  isAtOrigin: boolean;
+}
+
+/**
+ * Fetches vehicles available for assignment at a specific origin hub.
+ * A vehicle is available if:
+ * 1. is_active = true
+ * 2. status = 'AVAILABLE' (or matches currentVehicleId)
+ * 3. Not assigned to another SCHEDULED trip
+ * 4. Location matches originHubId (either last completed trip destination was originHubId, or new vehicle with 0 completed trips)
+ */
+export async function getAvailableVehiclesForOrigin(
+  supabase: AnySupabaseClient,
+  originHubId: string,
+  currentTripId?: string,
+  currentVehicleId?: string
+): Promise<AvailableVehicleOption[]> {
+  // 1. Fetch active vehicles with AVAILABLE status (or current vehicle)
+  let query = supabase
+    .from('vehicles')
+    .select(
+      `
+      id,
+      registration_number,
+      vehicle_type,
+      capacity_tonnes,
+      default_driver_id,
+      status,
+      is_active,
+      tenant_id,
+      created_at,
+      updated_at,
+      driver:drivers!default_driver_id (
+        id,
+        full_name,
+        phone
+      )
+    `
+    )
+    .eq('is_active', true);
+
+  if (currentVehicleId) {
+    query = query.or(`status.eq.AVAILABLE,id.eq.${currentVehicleId}`);
+  } else {
+    query = query.eq('status', 'AVAILABLE');
+  }
+
+  const { data: vehicles, error: vehiclesError } = await query;
+  if (vehiclesError) throw vehiclesError;
+  if (!vehicles || vehicles.length === 0) return [];
+
+  const vehicleIds = vehicles.map((v) => v.id);
+
+  // 2. Check which vehicles are currently assigned to other SCHEDULED trips
+  const { data: scheduledTrips, error: scheduledError } = await supabase
+    .from('trips')
+    .select('id, vehicle_id')
+    .in('vehicle_id', vehicleIds)
+    .eq('status', 'SCHEDULED');
+
+  if (scheduledError) throw scheduledError;
+
+  const busyVehicleIds = new Set(
+    (scheduledTrips || [])
+      .filter((t) => !currentTripId || t.id !== currentTripId)
+      .map((t) => t.vehicle_id)
+      .filter(Boolean)
+  );
+
+  // 3. Find latest completed trip for each vehicle to determine current hub location
+  const { data: completedTrips, error: tripsError } = await supabase
+    .from('trips')
+    .select(
+      `
+      vehicle_id,
+      to_hub_id,
+      completed_at,
+      to_hub:hubs!to_hub_id (
+        id,
+        hub_code,
+        city
+      )
+    `
+    )
+    .in('vehicle_id', vehicleIds)
+    .eq('status', 'COMPLETED')
+    .order('completed_at', { ascending: false });
+
+  if (tripsError) throw tripsError;
+
+  interface CompletedTripLocation {
+    vehicle_id: string | null;
+    to_hub_id: string;
+    completed_at: string | null;
+    to_hub: {
+      id: string;
+      hub_code: string;
+      city: string;
+    } | null;
+  }
+
+  // Map each vehicle to its latest completed trip
+  const latestTripMap = new Map<string, CompletedTripLocation>();
+  for (const t of (completedTrips as unknown as CompletedTripLocation[]) || []) {
+    if (t.vehicle_id && !latestTripMap.has(t.vehicle_id)) {
+      latestTripMap.set(t.vehicle_id, t);
+    }
+  }
+
+  const result: AvailableVehicleOption[] = [];
+
+  for (const v of vehicles as unknown as VehicleWithDriver[]) {
+    // Skip if vehicle is busy with another scheduled trip (and not the currently assigned one)
+    if (busyVehicleIds.has(v.id) && v.id !== currentVehicleId) {
+      continue;
+    }
+
+    const lastTrip = latestTripMap.get(v.id);
+    if (lastTrip) {
+      const isAtOrigin = lastTrip.to_hub_id === originHubId;
+      // If vehicle ended at origin hub OR is currently assigned to this trip
+      if (isAtOrigin || v.id === currentVehicleId) {
+        result.push({
+          ...v,
+          currentLocationHub: lastTrip.to_hub,
+          isAtOrigin,
+        });
+      }
+    } else {
+      // No prior completed trips: brand-new fleet vehicle, available at any hub
+      result.push({
+        ...v,
+        currentLocationHub: null,
+        isAtOrigin: true,
+      });
+    }
+  }
+
+  return result;
+}
+
