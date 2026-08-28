@@ -13,6 +13,7 @@ import {
   MoreVertical,
   Activity,
   Wrench,
+  MapPin,
 } from 'lucide-react';
 import {
   Table,
@@ -38,28 +39,58 @@ import { toggleVehicleStatusAction } from '../actions';
 import { VehicleDialog } from './vehicle-dialog';
 import type { VehicleWithDriver } from '@/lib/db/vehicles';
 import type { DriverRow } from '@/lib/db/drivers';
+import type { HubRow } from '@/lib/db/hubs';
 
 interface VehicleTableProps {
   initialVehicles: VehicleWithDriver[];
   drivers: DriverRow[];
+  hubs?: HubRow[];
 }
 
-export function VehicleTable({ initialVehicles, drivers }: VehicleTableProps) {
+export function VehicleTable({ initialVehicles, drivers, hubs = [] }: VehicleTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [editingVehicle, setEditingVehicle] = useState<VehicleWithDriver | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
+  const driverMap = React.useMemo(() => {
+    const map = new Map<string, DriverRow>();
+    (drivers || []).forEach((d) => map.set(d.id, d));
+    return map;
+  }, [drivers]);
+
+  const hubMap = React.useMemo(() => {
+    const map = new Map<string, HubRow>();
+    (hubs || []).forEach((h) => map.set(h.id, h));
+    return map;
+  }, [hubs]);
+
   const filteredVehicles = initialVehicles.filter((vehicle) => {
     if (statusFilter !== 'ALL' && vehicle.status !== statusFilter) return false;
+
+    const matchedDriver =
+      vehicle.driver && typeof vehicle.driver === 'object' && vehicle.driver.full_name
+        ? vehicle.driver
+        : vehicle.default_driver_id
+        ? driverMap.get(vehicle.default_driver_id)
+        : null;
+
+    const matchedHub =
+      vehicle.current_hub && typeof vehicle.current_hub === 'object' && vehicle.current_hub.hub_code
+        ? vehicle.current_hub
+        : vehicle.current_hub_id
+        ? hubMap.get(vehicle.current_hub_id)
+        : null;
 
     if (!searchTerm.trim()) return true;
     const term = searchTerm.toLowerCase().trim();
     return (
       vehicle.registration_number.toLowerCase().includes(term) ||
       vehicle.vehicle_type.toLowerCase().includes(term) ||
-      (vehicle.driver?.full_name && vehicle.driver.full_name.toLowerCase().includes(term))
+      (matchedDriver?.full_name && matchedDriver.full_name.toLowerCase().includes(term)) ||
+      (matchedHub?.hub_code && matchedHub.hub_code.toLowerCase().includes(term)) ||
+      (matchedHub?.city && matchedHub.city.toLowerCase().includes(term))
     );
   });
 
@@ -187,6 +218,7 @@ export function VehicleTable({ initialVehicles, drivers }: VehicleTableProps) {
               <TableHead className="font-bold text-slate-700">Vehicle Number</TableHead>
               <TableHead className="font-bold text-slate-700">Type & Capacity</TableHead>
               <TableHead className="font-bold text-slate-700">Assigned Driver</TableHead>
+              <TableHead className="font-bold text-slate-700">Current Location</TableHead>
               <TableHead className="font-bold text-slate-700">Operational Status</TableHead>
               <TableHead className="w-[90px] font-bold text-slate-700">Fleet Active</TableHead>
               <TableHead className="w-[80px] text-right font-bold text-slate-700">Actions</TableHead>
@@ -195,7 +227,7 @@ export function VehicleTable({ initialVehicles, drivers }: VehicleTableProps) {
           <TableBody>
             {filteredVehicles.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-40 text-center text-slate-500">
+                <TableCell colSpan={7} className="h-40 text-center text-slate-500">
                   <div className="flex flex-col items-center justify-center gap-2">
                     <Truck className="h-8 w-8 text-slate-300" />
                     <p className="font-medium text-slate-700">No vehicles found</p>
@@ -208,45 +240,75 @@ export function VehicleTable({ initialVehicles, drivers }: VehicleTableProps) {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredVehicles.map((vehicle) => (
-                <TableRow key={vehicle.id} className="hover:bg-slate-50/80 transition-colors">
-                  {/* Registration Number */}
-                  <TableCell>
-                    <div className="font-mono font-bold text-slate-900 tracking-wider">
-                      {vehicle.registration_number}
-                    </div>
-                  </TableCell>
+              filteredVehicles.map((vehicle) => {
+                const matchedDriver =
+                  vehicle.driver && typeof vehicle.driver === 'object' && vehicle.driver.full_name
+                    ? vehicle.driver
+                    : vehicle.default_driver_id
+                    ? driverMap.get(vehicle.default_driver_id)
+                    : null;
 
-                  {/* Vehicle Type & Capacity */}
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="bg-slate-100 border-slate-200 text-slate-700 text-xs font-semibold">
-                        {getVehicleTypeLabel(vehicle.vehicle_type)}
-                      </Badge>
-                      {vehicle.capacity_tonnes && (
-                        <span className="text-xs font-medium text-slate-600">
-                          {Number(vehicle.capacity_tonnes)} Tonnes
-                        </span>
-                      )}
-                    </div>
-                  </TableCell>
+                const matchedHub =
+                  vehicle.current_hub && typeof vehicle.current_hub === 'object' && vehicle.current_hub.hub_code
+                    ? vehicle.current_hub
+                    : vehicle.current_hub_id
+                    ? hubMap.get(vehicle.current_hub_id)
+                    : null;
 
-                  {/* Default Driver */}
-                  <TableCell>
-                    {vehicle.driver ? (
-                      <div>
-                        <div className="flex items-center gap-1.5 font-medium text-slate-800 text-sm">
-                          <UserCheck className="h-3.5 w-3.5 text-blue-600" />
-                          <span>{vehicle.driver.full_name}</span>
-                        </div>
-                        <div className="text-xs text-slate-500 font-mono">
-                          {formatPhoneDisplay(vehicle.driver.phone)}
-                        </div>
+                return (
+                  <TableRow key={vehicle.id} className="hover:bg-slate-50/80 transition-colors">
+                    {/* Registration Number */}
+                    <TableCell>
+                      <div className="font-mono font-bold text-slate-900 tracking-wider">
+                        {vehicle.registration_number}
                       </div>
-                    ) : (
-                      <span className="text-xs text-slate-400 italic">Unassigned</span>
-                    )}
-                  </TableCell>
+                    </TableCell>
+
+                    {/* Vehicle Type & Capacity */}
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="bg-slate-100 border-slate-200 text-slate-700 text-xs font-semibold">
+                          {getVehicleTypeLabel(vehicle.vehicle_type)}
+                        </Badge>
+                        {vehicle.capacity_tonnes && (
+                          <span className="text-xs font-medium text-slate-600">
+                            {Number(vehicle.capacity_tonnes)} Tonnes
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
+
+                    {/* Default Driver */}
+                    <TableCell>
+                      {matchedDriver ? (
+                        <div>
+                          <div className="flex items-center gap-1.5 font-medium text-slate-800 text-sm">
+                            <UserCheck className="h-3.5 w-3.5 text-blue-600" />
+                            <span>{matchedDriver.full_name}</span>
+                          </div>
+                          {matchedDriver.phone && (
+                            <div className="text-xs text-slate-500 font-mono">
+                              {formatPhoneDisplay(matchedDriver.phone)}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-400 italic">Unassigned</span>
+                      )}
+                    </TableCell>
+
+                    {/* Current Location */}
+                    <TableCell>
+                      {matchedHub ? (
+                        <div className="flex items-center gap-1.5 text-xs text-slate-800 font-medium">
+                          <MapPin className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                          <span className="font-mono font-bold text-blue-700">[{matchedHub.hub_code}]</span>
+                          <span className="truncate max-w-[140px] text-slate-700">{matchedHub.city}</span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-400 italic">—</span>
+                      )}
+                    </TableCell>
 
                   {/* Operational Status */}
                   <TableCell>{renderStatusBadge(vehicle.status)}</TableCell>
@@ -299,8 +361,8 @@ export function VehicleTable({ initialVehicles, drivers }: VehicleTableProps) {
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              ))
-            )}
+              );
+            }))}
           </TableBody>
         </Table>
       </div>
@@ -309,6 +371,7 @@ export function VehicleTable({ initialVehicles, drivers }: VehicleTableProps) {
       <VehicleDialog
         vehicle={editingVehicle}
         drivers={drivers}
+        hubs={hubs}
         open={isEditDialogOpen}
         onOpenChange={(open) => {
           setIsEditDialogOpen(open);

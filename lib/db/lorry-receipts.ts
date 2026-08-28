@@ -319,9 +319,17 @@ export async function updateLRStatus(
   id: string,
   status: LRStatus
 ): Promise<LRRow> {
+  const updatePayload: Record<string, unknown> = {
+    status,
+    updated_at: new Date().toISOString(),
+  };
+  if (status === 'CANCELLED') {
+    updatePayload.trip_id = null;
+  }
+
   const { data, error } = await supabase
     .from('lorry_receipts')
-    .update({ status, updated_at: new Date().toISOString() })
+    .update(updatePayload)
     .eq('id', id)
     .select()
     .single();
@@ -460,18 +468,21 @@ export async function assignPoolLRsToTrip(
 /**
  * Release all BOOKED LRs assigned to a trip back to the pool (trip_id = NULL).
  * Called when a SCHEDULED trip is cancelled — LRs remain BOOKED for re-assignment.
+ * Returns the IDs of affected LRs.
  */
 export async function releaseTripLRs(
   supabase: AnySupabaseClient,
   tripId: string
-): Promise<void> {
-  const { error } = await supabase
+): Promise<string[]> {
+  const { data, error } = await supabase
     .from('lorry_receipts')
     .update({ trip_id: null, updated_at: new Date().toISOString() })
     .eq('trip_id', tripId)
-    .eq('status', 'BOOKED');
+    .eq('status', 'BOOKED')
+    .select('id');
 
   if (error) throw error;
+  return (data ?? []).map((r) => r.id);
 }
 
 /**

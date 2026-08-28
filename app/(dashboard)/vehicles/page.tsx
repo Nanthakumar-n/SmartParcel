@@ -4,6 +4,7 @@ import { requireRole } from '@/lib/auth/session';
 import { createServerClient } from '@/lib/supabase/server';
 import { getVehiclesByTenant } from '@/lib/db/vehicles';
 import { getDriversByTenant } from '@/lib/db/drivers';
+import { getHubsByTenant } from '@/lib/db/hubs';
 import { Truck, CheckCircle2, Activity, Wrench } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { VehicleTable } from './_components/vehicle-table';
@@ -18,9 +19,10 @@ export default async function VehiclesPage() {
   await requireRole(['fleet_owner']);
   const supabase = createServerClient();
 
-  const [{ data: vehicles }, { data: drivers }] = await Promise.all([
+  const [{ data: vehicles }, { data: drivers }, { data: hubs }] = await Promise.all([
     getVehiclesByTenant(supabase, { pageSize: 100 }),
-    getDriversByTenant(supabase, { isActive: true, pageSize: 100 }),
+    getDriversByTenant(supabase, { pageSize: 200 }),
+    getHubsByTenant(supabase, { pageSize: 100 }),
   ]);
 
   const totalVehicles = vehicles.length;
@@ -40,7 +42,7 @@ export default async function VehiclesPage() {
             Maintain your transport fleet, vehicle registrations, payload capacities, and primary drivers.
           </p>
         </div>
-        <VehicleDialog drivers={drivers} />
+        <VehicleDialog drivers={drivers} hubs={hubs} />
       </div>
 
       {/* Metric Cards */}
@@ -99,7 +101,7 @@ export default async function VehiclesPage() {
       </div>
 
       {/* Vehicle Listing Table */}
-      <VehicleTable initialVehicles={vehicles} drivers={drivers} />
+      <VehicleTable initialVehicles={vehicles} drivers={drivers} hubs={hubs} />
     </div>
   );
 }

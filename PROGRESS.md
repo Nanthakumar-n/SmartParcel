@@ -10,14 +10,37 @@
 **Phase 1 (v1 MVP Web Admin) — ✅ Phase 1 Complete & Verified (2026-08-26)**
 
 ## Current Status
-🟢 **Phase 1 complete & verified.** All Phase 1 bugs resolved, tested, and pushed to GitHub:
-- Fleet assignment for scheduled trips (inline in manifest panel & ad-hoc dialog).
-- Origin-based vehicle availability & location validation.
-- Route card layout & text wrapping fix in manifest panel.
-- LR three-dots action dropdown menus fixed (ref-forwarding & menu group label fix).
-- Verified via browser subagent across desktop (1440×900) and mobile (375×812).
+🟢 **Phase 1 complete & verified.** All Phase 1 bugs and operational enhancements resolved, tested, and verified:
+- Cancelled LR trip dispatch exclusion & trip cancellation audit trail.
+- Online booking request linking, prefill, auto-reset, and idempotency duplicate protection in LR creation.
+- Truck Registry current location tracking (`current_hub_id`), auto-location updates upon trip arrival, and human-readable label resolution.
+- Hub branches live operational metrics (In-station trucks, incoming dispatches/LRs, outgoing dispatches/LRs).
 
 > Next Phase: **Phase 1.5 (Web-only)** — Driver Trip Expense Ledger, WhatsApp Notifications via WATI, Tenant Settings page.
+
+---
+
+## 🚧 Completed — Operations & Manifest Enhancements (Session 8.2 — 2026-08-27)
+
+### Milestone 8.2: Dispatch Rebooking, Truck Location Tracking & Booking Requests Integration
+
+- [x] **Trip Dispatch & LR Cancellation Workflow:**
+  - `CANCELLED` LRs excluded from trip dispatch creation and manifest selection pools.
+  - Trip cancellation automatically unlinks assigned LRs (`trip_id = null`), reverts their status to `BOOKED`, and records an audit log entry in `lr_status_history`.
+- [x] **Inbound Booking Request Integration & Duplicate Protection:**
+  - Added pending booking selector and quick-fill banner on `/lorry-receipts/new`.
+  - Added duplicate submission guard in `createLRService` rejecting already-converted requests.
+  - Automatic form and booking selection reset immediately upon successful LR generation.
+  - Added clickable Generated LR badge on `/booking-requests` table linking to LRs.
+- [x] **Truck Registry Current Location & Automatic Arrival Updates:**
+  - Database Migration `20250101000012_add_vehicle_current_hub.sql` added `current_hub_id` to `vehicles`.
+  - `markTripArrivedAction` atomically moves the vehicle's `current_hub_id` to the destination hub (`to_hub_id`).
+  - Added stationed hub dropdown in `VehicleDialog` and Current Location column in `/vehicles` table.
+  - Resolved Radix UI closed-state fallback issue so driver names, hub codes, and enum labels render properly across all triggers.
+- [x] **Hub Branches Live Metrics:**
+  - Added `getHubsWithMetricsByTenant` computing In-Station Trucks, Incoming (Trucks & LRs), and Outgoing (Trucks & LRs).
+  - Summary metric cards and dedicated columns added to `/hubs`.
+- [x] **Quality Gate:** `npx tsc --noEmit` (0 errors), `npm run lint` (0 warnings), `npm run build` (17/17 routes compiled cleanly).
 
 ---
 

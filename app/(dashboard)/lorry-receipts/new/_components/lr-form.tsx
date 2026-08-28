@@ -40,7 +40,9 @@ import {
 import { lrCreateSchema, type LRCreateInput } from '@/lib/validations/lr';
 import { createLorryReceiptAction } from '@/app/(dashboard)/lorry-receipts/actions';
 import { formatINR } from '@/lib/utils/format-currency';
+import type { BookingRequestWithLR } from '@/lib/db/booking-requests';
 import type { HubRow } from '@/lib/db/hubs';
+import { Badge } from '@/components/ui/badge';
 
 interface LRFormProps {
   hubs: HubRow[];
@@ -63,6 +65,7 @@ interface LRFormProps {
   }[];
   prefilledBooking?: {
     id: string;
+    booking_ref?: string;
     consignor_name: string;
     consignor_phone: string;
     consignee_name?: string;
@@ -80,6 +83,7 @@ interface LRFormProps {
     weight_kg: string;
     num_packages: string;
   } | null;
+  pendingBookings?: BookingRequestWithLR[];
 }
 
 export function LRForm({
@@ -88,6 +92,7 @@ export function LRForm({
   userRole,
   availableTrips,
   prefilledBooking,
+  pendingBookings = [],
 }: LRFormProps) {
   const router = useRouter();
 
@@ -146,10 +151,51 @@ export function LRForm({
     },
   });
 
+  const selectedBookingRequestId = watch('booking_request_id');
+
+  const handleSelectPendingBooking = (bookingId: string) => {
+    if (!bookingId || bookingId === 'none') {
+      setValue('booking_request_id', '');
+      return;
+    }
+    const req = pendingBookings.find((b) => b.id === bookingId);
+    if (!req) return;
+    setValue('booking_request_id', req.id);
+    setValue('consignor_name', req.customer_name);
+    setValue('consignor_phone', req.customer_phone);
+    if (req.consignee_name) setValue('consignee_name', req.consignee_name);
+    if (req.consignee_phone) setValue('consignee_phone', req.consignee_phone);
+    if (req.consignor_address_line1) setValue('consignor_address_line1', req.consignor_address_line1);
+    if (req.consignor_address_line2) setValue('consignor_address_line2', req.consignor_address_line2);
+    if (req.consignor_pin_code) setValue('consignor_pin_code', req.consignor_pin_code);
+    if (req.consignee_address_line1) setValue('consignee_address_line1', req.consignee_address_line1);
+    if (req.consignee_address_line2) setValue('consignee_address_line2', req.consignee_address_line2);
+    if (req.consignee_pin_code) setValue('consignee_pin_code', req.consignee_pin_code);
+    setValue('goods_description', req.goods_description);
+    setValue('quantity', req.quantity ? req.quantity.toString() : '1');
+    if (req.weight_kg) setValue('weight_kg', req.weight_kg.toString());
+    if (req.num_packages) setValue('num_packages', req.num_packages.toString());
+
+    // Match hubs
+    if (req.origin_city) {
+      const matchedFromHub = hubs.find(
+        (h) => h.city && h.city.toLowerCase() === req.origin_city.toLowerCase()
+      )?.id;
+      if (matchedFromHub) setValue('from_hub_id', matchedFromHub);
+    }
+    if (req.destination_city) {
+      const matchedToHub = hubs.find(
+        (h) => h.city && h.city.toLowerCase() === req.destination_city.toLowerCase()
+      )?.id;
+      if (matchedToHub) setValue('to_hub_id', matchedToHub);
+    }
+    toast.info(`Imported details from booking request ${req.booking_ref}`);
+  };
+
   const selectedFromHub = watch('from_hub_id');
   const selectedToHub = watch('to_hub_id');
-  const freightRupees = watch('freight_amount_rupees') || '0';
   const paymentMode = watch('payment_mode');
+  const freightRupees = watch('freight_amount_rupees') || '0';
 
   // Filter destination hubs (cannot match origin hub)
   const destinationHubs = activeHubs.filter((h) => h.id !== selectedFromHub);
@@ -159,17 +205,8 @@ export function LRForm({
     (t) => t.from_hub_id === selectedFromHub && t.to_hub_id === selectedToHub
   );
 
-  // Auto-slot to the first available matching trip if not manually set
-  useEffect(() => {
-    if (matchingTrips.length > 0) {
-      setValue('trip_id', matchingTrips[0].id);
-    } else {
-      setValue('trip_id', '');
-    }
-  }, [selectedFromHub, selectedToHub, matchingTrips, setValue]);
-
-  const handleCreateAnother = useCallback(() => {
-    setCreatedLR(null);
+  // Reset form helper
+  const handleReset = useCallback(() => {
     reset({
       booking_date: new Date().toISOString().split('T')[0],
       from_hub_id: defaultOriginHub,
@@ -194,20 +231,34 @@ export function LRForm({
       freight_amount_rupees: '0',
       payment_mode: 'PAID',
       expected_delivery_date: '',
+      booking_request_id: '',
     });
+    setCreatedLR(null);
   }, [defaultOriginHub, reset]);
 
-  // Global F2 keyboard shortcut for rapid entry
+  const handleCreateAnother = useCallback(() => {
+    handleReset();
+  }, [handleReset]);
+
+  // Keyboard shortcut: Escape resets form
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'F2') {
-        e.preventDefault();
-        handleCreateAnother();
+      if (e.key === 'Escape') {
+        handleReset();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleCreateAnother]);
+  }, [handleReset]);
+
+  // Auto-slot to the first available matching trip if not manually set
+  useEffect(() => {
+    if (matchingTrips.length > 0) {
+      setValue('trip_id', matchingTrips[0].id);
+    } else {
+      setValue('trip_id', '');
+    }
+  }, [selectedFromHub, selectedToHub, matchingTrips, setValue]);
 
   const onSubmit = async (data: LRCreateInput) => {
     try {
@@ -220,19 +271,44 @@ export function LRForm({
           lr_number: result.data.lr_number,
           data,
         });
+        reset({
+          booking_date: new Date().toISOString().split('T')[0],
+          from_hub_id: defaultOriginHub,
+          to_hub_id: '',
+          trip_id: '',
+          consignor_name: '',
+          consignor_phone: '+91',
+          consignor_gstin: '',
+          consignor_address_line1: '',
+          consignor_address_line2: '',
+          consignor_pin_code: '',
+          consignee_name: '',
+          consignee_phone: '+91',
+          consignee_gstin: '',
+          consignee_address_line1: '',
+          consignee_address_line2: '',
+          consignee_pin_code: '',
+          goods_description: '',
+          quantity: '1',
+          weight_kg: '',
+          num_packages: '1',
+          freight_amount_rupees: '0',
+          payment_mode: 'PAID',
+          expected_delivery_date: '',
+          booking_request_id: '',
+        });
+        router.refresh();
       } else {
-        if (result.error) {
-          Object.entries(result.error).forEach(([field, messages]) => {
-            const errList = messages as string[];
-            if (field === '_form') {
-              toast.error(errList[0]);
-            } else {
-              setError(field as keyof LRCreateInput, {
-                message: errList[0],
-              });
-            }
-          });
-        }
+        Object.entries(result.error).forEach(([field, messages]) => {
+          const errList = messages as string[];
+          if (field === '_form') {
+            toast.error(errList[0]);
+          } else {
+            setError(field as keyof LRCreateInput, {
+              message: errList[0],
+            });
+          }
+        });
       }
     } catch {
       toast.error('An unexpected error occurred. Please try again.');
@@ -241,6 +317,7 @@ export function LRForm({
 
   const originHubObj = hubs.find((h) => h.id === selectedFromHub);
   const destHubObj = hubs.find((h) => h.id === selectedToHub);
+  const matchedSelectedBooking = pendingBookings.find((b) => b.id === selectedBookingRequestId);
 
   return (
     <div className="space-y-6">
@@ -265,12 +342,71 @@ export function LRForm({
         {/* SECTION 1: Route & Booking Information */}
         <Card className="border-slate-200 bg-white shadow-xs">
           <CardHeader className="pb-3 border-b border-slate-100">
-            <CardTitle className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <Building2 className="h-4 w-4 text-blue-600" />
-              <span>1. Route & Trip Assignment</span>
+            <CardTitle className="text-sm font-bold text-slate-900 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-blue-600" />
+                <span>1. Route & Booking Information</span>
+              </div>
+              {prefilledBooking?.booking_ref && (
+                <Badge className="bg-blue-50 text-blue-800 border-blue-200 font-mono text-xs">
+                  Ref: {prefilledBooking.booking_ref}
+                </Badge>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 space-y-4">
+            {/* Booking Reference Selector or Banner */}
+            {prefilledBooking?.booking_ref ? (
+              <div className="p-3 bg-blue-50/80 border border-blue-200 rounded-lg flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-blue-600" />
+                  <div>
+                    <span className="text-xs font-semibold text-blue-900">Converted from Online Booking Request:</span>
+                    <span className="ml-2 font-mono font-bold text-blue-800 bg-white px-2 py-0.5 rounded border border-blue-200 text-xs">
+                      {prefilledBooking.booking_ref}
+                    </span>
+                  </div>
+                </div>
+                <Badge className="bg-blue-100 text-blue-800 border-blue-200 text-[10px]">
+                  Online Request
+                </Badge>
+              </div>
+            ) : pendingBookings.length > 0 ? (
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="booking_ref_select" className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                    <FileText className="h-3.5 w-3.5 text-slate-500" />
+                    <span>Link Inbound Booking Request (Optional)</span>
+                  </Label>
+                  {matchedSelectedBooking && (
+                    <span className="text-[11px] font-mono text-blue-600 font-semibold">
+                      Ref: {matchedSelectedBooking.booking_ref}
+                    </span>
+                  )}
+                </div>
+                <Select
+                  value={selectedBookingRequestId || 'none'}
+                  onValueChange={(val) => handleSelectPendingBooking(val || '')}
+                  disabled={isSubmitting}
+                >
+                  <SelectTrigger id="booking_ref_select" className="text-xs h-9 bg-white">
+                    <SelectValue placeholder="Direct / Walk-in Booking (No online reference)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none" className="text-xs">
+                      Direct / Walk-in Booking (No online reference)
+                    </SelectItem>
+                    {pendingBookings.map((b) => (
+                      <SelectItem key={b.id} value={b.id} className="text-xs">
+                        <span className="font-mono font-bold text-blue-600 mr-2">[{b.booking_ref}]</span>
+                        <span>{b.customer_name} ({b.origin_city} → {b.destination_city})</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null}
+
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {/* Origin Hub */}
               <div className="space-y-1.5">

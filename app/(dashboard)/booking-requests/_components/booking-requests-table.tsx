@@ -32,26 +32,27 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Search, Check, X, Loader2, Phone, Info } from 'lucide-react';
+import Link from 'next/link';
+import { Search, Check, X, Loader2, Phone, Info, FileText, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import { rejectBookingSchema, type RejectBookingInput } from '@/lib/validations/booking-request';
 import { rejectBookingRequestAction } from '../actions';
-import type { BookingRequestRow } from '@/lib/db/booking-requests';
+import type { BookingRequestWithLR } from '@/lib/db/booking-requests';
 import { formatDateIST } from '@/lib/utils/format-date';
 import { formatPhoneDisplay } from '@/lib/utils/format-phone';
 
 interface BookingRequestsTableProps {
-  initialRequests: BookingRequestRow[];
+  initialRequests: BookingRequestWithLR[];
 }
 
 export function BookingRequestsTable({ initialRequests }: BookingRequestsTableProps) {
   const router = useRouter();
-  const [requests, setRequests] = useState<BookingRequestRow[]>(initialRequests);
+  const [requests, setRequests] = useState<BookingRequestWithLR[]>(initialRequests);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
 
   // Rejection Dialog states
-  const [rejectingRequest, setRejectingRequest] = useState<BookingRequestRow | null>(null);
+  const [rejectingRequest, setRejectingRequest] = useState<BookingRequestWithLR | null>(null);
   const [isPending, startTransition] = useTransition();
 
   React.useEffect(() => {
@@ -101,7 +102,7 @@ export function BookingRequestsTable({ initialRequests }: BookingRequestsTablePr
     });
   };
 
-  const handleAccept = (req: BookingRequestRow) => {
+  const handleAccept = (req: BookingRequestWithLR) => {
     router.push(`/lorry-receipts/new?booking_id=${req.id}`);
   };
 
@@ -275,9 +276,23 @@ export function BookingRequestsTable({ initialRequests }: BookingRequestsTablePr
                         </Button>
                       </div>
                     ) : req.status === 'ACCEPTED' ? (
-                      <span className="text-[11px] text-slate-400 italic font-medium">
-                        Digitized waybill issued
-                      </span>
+                      <div className="flex flex-col items-end gap-1">
+                        {req.lorry_receipt?.lr_number ? (
+                          <Link
+                            href={`/lorry-receipts?search=${encodeURIComponent(req.lorry_receipt.lr_number)}`}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 text-xs font-mono font-bold transition-colors shadow-2xs group"
+                            title="View Lorry Receipt"
+                          >
+                            <FileText className="h-3.5 w-3.5 text-emerald-600" />
+                            <span>{req.lorry_receipt.lr_number}</span>
+                            <ExternalLink className="h-3 w-3 text-emerald-500 group-hover:translate-x-0.5 transition-transform" />
+                          </Link>
+                        ) : (
+                          <span className="text-[11px] text-slate-400 italic font-medium">
+                            Digitized waybill issued
+                          </span>
+                        )}
+                      </div>
                     ) : (
                       <div className="flex items-center justify-end gap-1 text-[11px] text-slate-400 italic group relative">
                         <span>Rejected</span>

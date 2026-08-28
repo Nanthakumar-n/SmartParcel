@@ -40,10 +40,12 @@ import {
 import { createVehicleAction, updateVehicleAction } from '../actions';
 import type { VehicleWithDriver } from '@/lib/db/vehicles';
 import type { DriverRow } from '@/lib/db/drivers';
+import type { HubRow } from '@/lib/db/hubs';
 
 interface VehicleDialogProps {
   vehicle?: VehicleWithDriver | null;
   drivers: DriverRow[];
+  hubs?: HubRow[];
   trigger?: React.ReactElement;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -53,6 +55,7 @@ interface VehicleDialogProps {
 export function VehicleDialog({
   vehicle,
   drivers,
+  hubs = [],
   trigger,
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange,
@@ -72,6 +75,7 @@ export function VehicleDialog({
       vehicle_type: (vehicle?.vehicle_type as VehicleType) ?? 'TRUCK',
       capacity_tonnes: vehicle?.capacity_tonnes ? String(vehicle.capacity_tonnes) : '',
       default_driver_id: vehicle?.default_driver_id ?? '',
+      current_hub_id: vehicle?.current_hub_id ?? '',
       status: (vehicle?.status as VehicleStatus) ?? 'AVAILABLE',
       is_active: vehicle?.is_active ?? true,
     },
@@ -84,6 +88,7 @@ export function VehicleDialog({
         vehicle_type: (vehicle?.vehicle_type as VehicleType) ?? 'TRUCK',
         capacity_tonnes: vehicle?.capacity_tonnes ? String(vehicle.capacity_tonnes) : '',
         default_driver_id: vehicle?.default_driver_id ?? '',
+        current_hub_id: vehicle?.current_hub_id ?? '',
         status: (vehicle?.status as VehicleStatus) ?? 'AVAILABLE',
         is_active: vehicle?.is_active ?? true,
       });
@@ -194,7 +199,13 @@ export function VehicleDialog({
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select type" />
+                          {field.value === 'TRUCK'
+                            ? 'Heavy Truck / Lorry'
+                            : field.value === 'MINI_TRUCK'
+                            ? 'Mini Truck (Eicher / 407)'
+                            : field.value === 'TEMPO'
+                            ? 'Tempo (Tata Ace / Pickup)'
+                            : <SelectValue placeholder="Select type" />}
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -246,7 +257,13 @@ export function VehicleDialog({
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select status" />
+                          {field.value === 'AVAILABLE'
+                            ? 'Available'
+                            : field.value === 'IN_TRANSIT'
+                            ? 'In Transit'
+                            : field.value === 'UNDER_MAINTENANCE'
+                            ? 'Under Maintenance'
+                            : <SelectValue placeholder="Select status" />}
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -276,14 +293,85 @@ export function VehicleDialog({
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a default driver" />
+                        {(() => {
+                          if (!field.value || field.value === 'unassigned') {
+                            return <span className="text-slate-500">-- No default driver --</span>;
+                          }
+                          const d =
+                            drivers.find((dr) => dr.id === field.value) ||
+                            (vehicle?.driver?.id === field.value ? vehicle.driver : null);
+                          return d ? (
+                            <span>{d.full_name} {d.phone ? `(${d.phone})` : ''}</span>
+                          ) : (
+                            <span className="text-slate-500">-- No default driver --</span>
+                          );
+                        })()}
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       <SelectItem value="unassigned">-- No default driver --</SelectItem>
+                      {vehicle?.driver && !drivers.some((d) => d.id === vehicle.driver?.id) && (
+                        <SelectItem value={vehicle.driver.id}>
+                          {vehicle.driver.full_name} ({vehicle.driver.phone})
+                        </SelectItem>
+                      )}
                       {drivers.map((driver) => (
                         <SelectItem key={driver.id} value={driver.id}>
                           {driver.full_name} ({driver.phone})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage className="text-[11px]" />
+                </FormItem>
+              )}
+            />
+
+            {/* Current Stationed Hub */}
+            <FormField
+              control={form.control}
+              name="current_hub_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs font-semibold text-slate-700">
+                    Current Location / Stationed Hub (Optional)
+                  </FormLabel>
+                  <Select
+                    onValueChange={(val) => field.onChange(val === 'unassigned' ? '' : val)}
+                    value={field.value || 'unassigned'}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        {(() => {
+                          if (!field.value || field.value === 'unassigned') {
+                            return <span className="text-slate-500">-- Not stationed at a hub --</span>;
+                          }
+                          const h =
+                            hubs.find((hb) => hb.id === field.value) ||
+                            (vehicle?.current_hub?.id === field.value ? vehicle.current_hub : null);
+                          return h ? (
+                            <span className="flex items-center gap-1.5 truncate">
+                              <span className="font-mono font-bold text-blue-600">[{h.hub_code}]</span>
+                              <span>{h.name} ({h.city})</span>
+                            </span>
+                          ) : (
+                            <span className="text-slate-500">-- Not stationed at a hub --</span>
+                          );
+                        })()}
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="unassigned">-- Not stationed at a hub --</SelectItem>
+                      {vehicle?.current_hub && !hubs.some((h) => h.id === vehicle.current_hub?.id) && (
+                        <SelectItem value={vehicle.current_hub.id}>
+                          <span className="font-mono font-bold text-blue-600 mr-1.5">[{vehicle.current_hub.hub_code}]</span>
+                          <span>{vehicle.current_hub.name} ({vehicle.current_hub.city})</span>
+                        </SelectItem>
+                      )}
+                      {hubs.map((hub) => (
+                        <SelectItem key={hub.id} value={hub.id}>
+                          <span className="font-mono font-bold text-blue-600 mr-1.5">[{hub.hub_code}]</span>
+                          <span>{hub.name} ({hub.city})</span>
                         </SelectItem>
                       ))}
                     </SelectContent>

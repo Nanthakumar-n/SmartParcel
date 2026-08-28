@@ -254,7 +254,13 @@ export function UserDialog({ user, hubs, trigger }: UserDialogProps) {
                   disabled={isSubmitting}
                 >
                   <SelectTrigger className="w-full text-xs">
-                    <SelectValue placeholder="Select user role" />
+                    {field.value === 'hub_manager' ? (
+                      'Hub Manager'
+                    ) : field.value === 'fleet_owner' ? (
+                      'Fleet Owner'
+                    ) : (
+                      <SelectValue placeholder="Select user role" />
+                    )}
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="hub_manager" className="text-xs">

@@ -28,7 +28,7 @@ interface AvailableTrip {
   } | null;
 }
 
-import { getBookingRequestById } from '@/lib/db/booking-requests';
+import { getBookingRequestById, getBookingRequestsByTenant } from '@/lib/db/booking-requests';
 
 export default async function NewLRPage({
   searchParams,
@@ -38,7 +38,7 @@ export default async function NewLRPage({
   const session = await requireRole(['fleet_owner', 'hub_manager']);
   const supabase = createServerClient();
 
-  const [hubsResult, assignedHubIds, tripsResult, bookingRequest] = await Promise.all([
+  const [hubsResult, assignedHubIds, tripsResult, bookingRequest, pendingBookingsResult] = await Promise.all([
     getHubsByTenant(supabase, { pageSize: 100 }),
     getUserHubIds(session.id),
     supabase
@@ -66,10 +66,12 @@ export default async function NewLRPage({
     searchParams?.booking_id
       ? getBookingRequestById(supabase, searchParams.booking_id)
       : Promise.resolve(null),
+    getBookingRequestsByTenant(supabase, { status: 'PENDING', pageSize: 100 }),
   ]);
 
   const hubs = hubsResult.data;
   const availableTrips = (tripsResult.data as unknown as AvailableTrip[]) ?? [];
+  const pendingBookings = pendingBookingsResult.data;
 
   // Attempt fuzzy matches of cities to auto-select hubs
   let prefilledBooking = null;
@@ -83,6 +85,7 @@ export default async function NewLRPage({
 
     prefilledBooking = {
       id: bookingRequest.id,
+      booking_ref: bookingRequest.booking_ref,
       consignor_name: bookingRequest.customer_name,
       consignor_phone: bookingRequest.customer_phone,
       consignee_name: bookingRequest.consignee_name || '',
@@ -131,6 +134,7 @@ export default async function NewLRPage({
         userRole={session.role}
         availableTrips={availableTrips}
         prefilledBooking={prefilledBooking}
+        pendingBookings={pendingBookings}
       />
     </div>
   );

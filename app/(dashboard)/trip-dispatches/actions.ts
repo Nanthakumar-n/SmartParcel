@@ -14,7 +14,12 @@ import {
   revertTripLRsToBooked,
 } from '@/lib/db/lorry-receipts';
 import { insertStatusHistoryBulk } from '@/lib/db/lr-status-history';
-import { updateVehicleStatus, getAvailableVehiclesForOrigin, type AvailableVehicleOption } from '@/lib/db/vehicles';
+import {
+  updateVehicleStatus,
+  updateVehicleLocationAndStatus,
+  getAvailableVehiclesForOrigin,
+  type AvailableVehicleOption,
+} from '@/lib/db/vehicles';
 import { getDriversByTenant, type DriverRow } from '@/lib/db/drivers';
 import {
   type ActionResult,
@@ -375,14 +380,21 @@ export async function markTripArrivedAction(tripId: string): Promise<ActionResul
       completed_at: new Date().toISOString(),
     });
 
-    // Vehicle → AVAILABLE
+    // Vehicle → AVAILABLE and update current location to destination hub
     if (trip.vehicle_id) {
-      await updateVehicleStatus(supabase, trip.vehicle_id, 'AVAILABLE');
+      await updateVehicleLocationAndStatus(
+        supabase,
+        trip.vehicle_id,
+        trip.to_hub_id,
+        'AVAILABLE'
+      );
     }
 
     revalidatePath('/trip-dispatches');
     revalidatePath('/lorry-receipts');
     revalidatePath('/dashboard');
+    revalidatePath('/vehicles');
+    revalidatePath('/hubs');
 
     return actionSuccessVoid();
   } catch (error: unknown) {
@@ -434,7 +446,18 @@ export async function cancelTripAction(tripId: string): Promise<ActionResult<voi
 
     if (trip.status === 'SCHEDULED') {
       // Release all assigned BOOKED LRs back to pool
-      await releaseTripLRs(supabase, tripId);
+      const releasedIds = await releaseTripLRs(supabase, tripId);
+      if (releasedIds.length > 0) {
+        await insertStatusHistoryBulk(supabase, releasedIds.map((id) => ({
+          lr_id: id,
+          from_status: 'BOOKED' as LRStatus,
+          to_status: 'BOOKED' as LRStatus,
+          changed_by: session.id,
+          changed_at: new Date().toISOString(),
+          notes: `Scheduled trip cancelled — LR returned to booking pool`,
+          tenant_id: session.tenantId,
+        })));
+      }
     } else if (trip.status === 'IN_TRANSIT') {
       // Revert all IN_TRANSIT LRs → BOOKED + release to pool
       const revertedIds = await revertTripLRsToBooked(supabase, tripId);

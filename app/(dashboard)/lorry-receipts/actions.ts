@@ -40,6 +40,8 @@ export async function createLorryReceiptAction(
 
     if (result.success) {
       revalidatePath('/lorry-receipts');
+      revalidatePath('/lorry-receipts/new');
+      revalidatePath('/booking-requests');
       revalidatePath('/dashboard');
     }
 

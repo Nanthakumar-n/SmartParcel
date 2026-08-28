@@ -908,6 +908,7 @@ export type Database = {
         Row: {
           capacity_tonnes: number | null
           created_at: string
+          current_hub_id: string | null
           default_driver_id: string | null
           id: string
           is_active: boolean
@@ -920,6 +921,7 @@ export type Database = {
         Insert: {
           capacity_tonnes?: number | null
           created_at?: string
+          current_hub_id?: string | null
           default_driver_id?: string | null
           id?: string
           is_active?: boolean
@@ -932,6 +934,7 @@ export type Database = {
         Update: {
           capacity_tonnes?: number | null
           created_at?: string
+          current_hub_id?: string | null
           default_driver_id?: string | null
           id?: string
           is_active?: boolean
@@ -942,6 +945,13 @@ export type Database = {
           vehicle_type?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "vehicles_current_hub_id_fkey"
+            columns: ["current_hub_id"]
+            isOneToOne: false
+            referencedRelation: "hubs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "vehicles_default_driver_id_fkey"
             columns: ["default_driver_id"]

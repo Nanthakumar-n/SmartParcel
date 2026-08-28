@@ -37,17 +37,23 @@ export async function createVehicleAction(
       ? cleanData.default_driver_id
       : null;
 
+    const currentHubId = cleanData.current_hub_id && cleanData.current_hub_id.trim() !== ''
+      ? cleanData.current_hub_id
+      : null;
+
     const newVehicle = await insertVehicle(supabase, {
       tenant_id: session.tenantId,
       registration_number: formatVehicleNumber(cleanData.registration_number),
       vehicle_type: cleanData.vehicle_type,
       capacity_tonnes: capacityNum,
       default_driver_id: driverId,
+      current_hub_id: currentHubId,
       status: cleanData.status,
       is_active: cleanData.is_active,
     });
 
     revalidatePath('/vehicles');
+    revalidatePath('/hubs');
     return actionSuccess({
       id: newVehicle.id,
       registration_number: newVehicle.registration_number,
@@ -89,11 +95,16 @@ export async function updateVehicleAction(
       ? cleanData.default_driver_id
       : null;
 
+    const currentHubId = cleanData.current_hub_id && cleanData.current_hub_id.trim() !== ''
+      ? cleanData.current_hub_id
+      : null;
+
     const updated = await updateVehicle(supabase, id, {
       registration_number: formatVehicleNumber(cleanData.registration_number),
       vehicle_type: cleanData.vehicle_type,
       capacity_tonnes: capacityNum,
       default_driver_id: driverId,
+      current_hub_id: currentHubId,
       status: cleanData.status,
       is_active: cleanData.is_active,
     });

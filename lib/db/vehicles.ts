@@ -11,6 +11,12 @@ export interface VehicleWithDriver extends VehicleRow {
     full_name: string;
     phone: string;
   } | null;
+  current_hub?: {
+    id: string;
+    hub_code: string;
+    name: string;
+    city: string;
+  } | null;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -43,6 +49,7 @@ export async function getVehiclesByTenant(
       vehicle_type,
       capacity_tonnes,
       default_driver_id,
+      current_hub_id,
       status,
       is_active,
       tenant_id,
@@ -52,6 +59,12 @@ export async function getVehiclesByTenant(
         id,
         full_name,
         phone
+      ),
+      current_hub:hubs!current_hub_id (
+        id,
+        hub_code,
+        name,
+        city
       )
     `,
       { count: 'exact' }
@@ -103,6 +116,7 @@ export async function getVehicleById(
       vehicle_type,
       capacity_tonnes,
       default_driver_id,
+      current_hub_id,
       status,
       is_active,
       tenant_id,
@@ -112,6 +126,12 @@ export async function getVehicleById(
         id,
         full_name,
         phone
+      ),
+      current_hub:hubs!current_hub_id (
+        id,
+        hub_code,
+        name,
+        city
       )
     `
     )
@@ -135,7 +155,7 @@ export async function insertVehicle(
   const { data, error } = await supabase
     .from('vehicles')
     .insert(vehicleData)
-    .select('id, registration_number, vehicle_type, capacity_tonnes, default_driver_id, status, is_active, tenant_id, created_at, updated_at')
+    .select('id, registration_number, vehicle_type, capacity_tonnes, default_driver_id, current_hub_id, status, is_active, tenant_id, created_at, updated_at')
     .single();
 
   if (error) {
@@ -157,7 +177,7 @@ export async function updateVehicle(
     .from('vehicles')
     .update({ ...vehicleData, updated_at: new Date().toISOString() })
     .eq('id', id)
-    .select('id, registration_number, vehicle_type, capacity_tonnes, default_driver_id, status, is_active, tenant_id, created_at, updated_at')
+    .select('id, registration_number, vehicle_type, capacity_tonnes, default_driver_id, current_hub_id, status, is_active, tenant_id, created_at, updated_at')
     .single();
 
   if (error) {
@@ -197,6 +217,27 @@ export async function updateVehicleStatus(
   if (error) throw error;
 }
 
+/**
+ * Update vehicle current stationed hub and status — called automatically when a trip arrives/completes.
+ */
+export async function updateVehicleLocationAndStatus(
+  supabase: AnySupabaseClient,
+  vehicleId: string,
+  currentHubId: string | null,
+  status: 'AVAILABLE' | 'IN_TRANSIT' | 'UNDER_MAINTENANCE'
+): Promise<void> {
+  const { error } = await supabase
+    .from('vehicles')
+    .update({
+      current_hub_id: currentHubId,
+      status,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', vehicleId);
+
+  if (error) throw error;
+}
+
 export interface AvailableVehicleOption extends VehicleWithDriver {
   currentLocationHub?: {
     id: string;
@@ -212,7 +253,7 @@ export interface AvailableVehicleOption extends VehicleWithDriver {
  * 1. is_active = true
  * 2. status = 'AVAILABLE' (or matches currentVehicleId)
  * 3. Not assigned to another SCHEDULED trip
- * 4. Location matches originHubId (either last completed trip destination was originHubId, or new vehicle with 0 completed trips)
+ * 4. Location matches originHubId (either current_hub_id matches, last completed trip destination was originHubId, or new vehicle with 0 completed trips)
  */
 export async function getAvailableVehiclesForOrigin(
   supabase: AnySupabaseClient,
@@ -230,6 +271,7 @@ export async function getAvailableVehiclesForOrigin(
       vehicle_type,
       capacity_tonnes,
       default_driver_id,
+      current_hub_id,
       status,
       is_active,
       tenant_id,
@@ -239,6 +281,11 @@ export async function getAvailableVehiclesForOrigin(
         id,
         full_name,
         phone
+      ),
+      current_hub:hubs!current_hub_id (
+        id,
+        hub_code,
+        city
       )
     `
     )
@@ -272,7 +319,7 @@ export async function getAvailableVehiclesForOrigin(
       .filter(Boolean)
   );
 
-  // 3. Find latest completed trip for each vehicle to determine current hub location
+  // 3. Find latest completed trip for each vehicle to determine current hub location if current_hub_id is null
   const { data: completedTrips, error: tripsError } = await supabase
     .from('trips')
     .select(
@@ -320,24 +367,34 @@ export async function getAvailableVehiclesForOrigin(
       continue;
     }
 
-    const lastTrip = latestTripMap.get(v.id);
-    if (lastTrip) {
-      const isAtOrigin = lastTrip.to_hub_id === originHubId;
-      // If vehicle ended at origin hub OR is currently assigned to this trip
+    if (v.current_hub_id && v.current_hub) {
+      const isAtOrigin = v.current_hub_id === originHubId;
       if (isAtOrigin || v.id === currentVehicleId) {
         result.push({
           ...v,
-          currentLocationHub: lastTrip.to_hub,
+          currentLocationHub: v.current_hub,
           isAtOrigin,
         });
       }
     } else {
-      // No prior completed trips: brand-new fleet vehicle, available at any hub
-      result.push({
-        ...v,
-        currentLocationHub: null,
-        isAtOrigin: true,
-      });
+      const lastTrip = latestTripMap.get(v.id);
+      if (lastTrip) {
+        const isAtOrigin = lastTrip.to_hub_id === originHubId;
+        if (isAtOrigin || v.id === currentVehicleId) {
+          result.push({
+            ...v,
+            currentLocationHub: lastTrip.to_hub,
+            isAtOrigin,
+          });
+        }
+      } else {
+        // No prior completed trips and no explicit hub: available at any hub
+        result.push({
+          ...v,
+          currentLocationHub: null,
+          isAtOrigin: true,
+        });
+      }
     }
   }
 

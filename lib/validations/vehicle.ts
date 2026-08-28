@@ -24,6 +24,7 @@ export const vehicleSchema = z.object({
     .optional()
     .or(z.literal('')),
   default_driver_id: z.string().optional().or(z.literal('')),
+  current_hub_id: z.string().uuid().optional().or(z.literal('')).nullable(),
   status: z.enum(['AVAILABLE', 'IN_TRANSIT', 'UNDER_MAINTENANCE']),
   is_active: z.boolean(),
 });

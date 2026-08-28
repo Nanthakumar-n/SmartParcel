@@ -319,7 +319,7 @@ export function TripDialog({ hubs, drivers }: TripDialogProps) {
                     <SelectContent>
                       {activeDrivers.map((d) => (
                         <SelectItem key={d.id} value={d.id} className="text-xs">
-                          {d.full_name} <span className="text-slate-400">({d.license_number})</span>
+                          {d.full_name} <span className="text-slate-400">({d.phone || d.license_number || 'Driver'})</span>
                         </SelectItem>
                       ))}
                     </SelectContent>

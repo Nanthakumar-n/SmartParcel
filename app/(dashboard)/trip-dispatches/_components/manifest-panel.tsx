@@ -128,7 +128,7 @@ export function ManifestPanel({ trip, open, userRole, onOpenChange }: ManifestPa
 
   if (!currentTrip) return null;
 
-  const lrs = currentTrip.lorry_receipts || [];
+  const lrs = (currentTrip.lorry_receipts || []).filter((lr) => lr.status !== 'CANCELLED');
   const bookedLRs = lrs.filter((lr) => lr.status === 'BOOKED');
   const inTransitLRs = lrs.filter((lr) => lr.status === 'IN_TRANSIT');
   const totalFreight = lrs.reduce((acc, curr) => acc + Number(curr.freight_amount), 0);

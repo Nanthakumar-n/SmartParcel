@@ -8,6 +8,16 @@ export type BookingRequestUpdate = Database['public']['Tables']['booking_request
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnySupabaseClient = SupabaseClient<Database, any, any>;
 
+export interface BookingRequestWithLR extends BookingRequestRow {
+  lorry_receipt?: {
+    id: string;
+    lr_number: string | null;
+    status: string;
+    payment_mode: string;
+    freight_amount: number;
+  } | null;
+}
+
 export interface GetBookingRequestsOptions {
   status?: 'PENDING' | 'ACCEPTED' | 'REJECTED';
   page?: number;
@@ -20,7 +30,7 @@ export interface GetBookingRequestsOptions {
 export async function getBookingRequestsByTenant(
   supabase: AnySupabaseClient,
   options: GetBookingRequestsOptions = {}
-): Promise<{ data: BookingRequestRow[]; count: number }> {
+): Promise<{ data: BookingRequestWithLR[]; count: number }> {
   const { status, page = 0, pageSize = 50 } = options;
 
   let query = supabase
@@ -31,7 +41,14 @@ export async function getBookingRequestsByTenant(
       consignor_address_line1, consignor_address_line2, consignor_pin_code,
       consignee_name, consignee_phone, consignee_address_line1, consignee_address_line2, consignee_pin_code,
       assigned_hub_id, lr_id, notes, rejection_reason,
-      processed_by, processed_at, created_at, updated_at`,
+      processed_by, processed_at, created_at, updated_at,
+      lorry_receipt:lorry_receipts!lr_id (
+        id,
+        lr_number,
+        status,
+        payment_mode,
+        freight_amount
+      )`,
       { count: 'exact' }
     )
     .order('created_at', { ascending: false });
@@ -46,7 +63,7 @@ export async function getBookingRequestsByTenant(
 
   if (error) throw error;
   return {
-    data: data || [],
+    data: (data as unknown as BookingRequestWithLR[]) || [],
     count: count || 0,
   };
 }
@@ -57,7 +74,7 @@ export async function getBookingRequestsByTenant(
 export async function getBookingRequestById(
   supabase: AnySupabaseClient,
   id: string
-): Promise<BookingRequestRow | null> {
+): Promise<BookingRequestWithLR | null> {
   const { data, error } = await supabase
     .from('booking_requests')
     .select(
@@ -66,13 +83,20 @@ export async function getBookingRequestById(
       consignor_address_line1, consignor_address_line2, consignor_pin_code,
       consignee_name, consignee_phone, consignee_address_line1, consignee_address_line2, consignee_pin_code,
       assigned_hub_id, lr_id, notes, rejection_reason,
-      processed_by, processed_at, created_at, updated_at`
+      processed_by, processed_at, created_at, updated_at,
+      lorry_receipt:lorry_receipts!lr_id (
+        id,
+        lr_number,
+        status,
+        payment_mode,
+        freight_amount
+      )`
     )
     .eq('id', id)
     .maybeSingle();
 
   if (error) throw error;
-  return data;
+  return data as unknown as BookingRequestWithLR | null;
 }
 
 /**

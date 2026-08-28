@@ -48,7 +48,20 @@ export async function createLRService(
   try {
     const isBookingRequest = !!input.booking_request_id;
 
-    // 4. Insert LR into database (trigger automatically generates lr_number)
+    // 4. Duplicate prevention for online booking requests
+    if (isBookingRequest) {
+      const { data: existingBooking } = await supabase
+        .from('booking_requests')
+        .select('id, status, lr_id')
+        .eq('id', input.booking_request_id!)
+        .maybeSingle();
+
+      if (existingBooking && (existingBooking.status === 'ACCEPTED' || existingBooking.lr_id)) {
+        return formError('This online booking request has already been converted into a Lorry Receipt.');
+      }
+    }
+
+    // 5. Insert LR into database (trigger automatically generates lr_number)
     const newLR = await insertLR(supabase, {
       booking_date: input.booking_date,
       source: isBookingRequest ? 'CUSTOMER_REQUEST' : 'HUB_DIRECT',
