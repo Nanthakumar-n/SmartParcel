@@ -84,6 +84,7 @@ interface ManifestPanelProps {
   trip: TripWithRelations | null;
   open: boolean;
   userRole?: string;
+  userHubIds?: string[];
   userId?: string;
   onOpenChange: (open: boolean) => void;
 }
@@ -101,7 +102,7 @@ const EXPENSE_CATEGORY_STYLES: Record<
   MISC: { label: 'Misc', bg: 'bg-slate-100', text: 'text-slate-700', border: 'border-slate-300' },
 };
 
-export function ManifestPanel({ trip, open, userRole, userId, onOpenChange }: ManifestPanelProps) {
+export function ManifestPanel({ trip, open, userRole, userHubIds, userId, onOpenChange }: ManifestPanelProps) {
   const [currentTrip, setCurrentTrip] = useState<TripWithRelations | null>(trip);
   const [activeTab, setActiveTab] = useState<'manifest' | 'expenses'>('manifest');
   const [isPending, startTransition] = useTransition();
@@ -920,8 +921,13 @@ export function ManifestPanel({ trip, open, userRole, userId, onOpenChange }: Ma
                     )}
                   </div>
 
-                  {/* Settle CTA for Fleet Owner if not settled */}
-                  {!isSettled && isFleetOwner && expenses.length > 0 && (
+                  {/* Settle CTA for Fleet Owner or Hub Manager at destination upon arrival */}
+                  {!isSettled &&
+                    expenses.length > 0 &&
+                    (isFleetOwner ||
+                      (userRole === 'hub_manager' &&
+                        currentTrip.status === 'COMPLETED' &&
+                        userHubIds?.includes(currentTrip.to_hub.id))) && (
                     <Button
                       size="sm"
                       onClick={() => setSettleDialogOpen(true)}

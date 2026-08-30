@@ -1,11 +1,13 @@
 import React from 'react';
 import { Metadata } from 'next';
-import { requireRole } from '@/lib/auth/session';
+import { requireRole, getUserHubIds } from '@/lib/auth/session';
 import { createServerClient } from '@/lib/supabase/server';
 import { getTripsWithExpenseLedgerByTenant } from '@/lib/db/trip-expenses';
 import { ExpenseLedgerTable } from './_components/expense-ledger-table';
 import { Badge } from '@/components/ui/badge';
-import { Receipt } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Receipt, TrendingUp } from 'lucide-react';
+import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'Trip Expenses & Advances | SmartParcel Logistics',
@@ -23,6 +25,7 @@ interface TripExpensesPageProps {
 export default async function TripExpensesPage({ searchParams }: TripExpensesPageProps) {
   const session = await requireRole(['fleet_owner', 'hub_manager']);
   const supabase = createServerClient();
+  const userHubIds = await getUserHubIds(session.id);
 
   const search = searchParams?.search || '';
   const hubId = searchParams?.hub || 'ALL';
@@ -60,7 +63,20 @@ export default async function TripExpensesPage({ searchParams }: TripExpensesPag
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {isFleetOwner && (
+            <Link href="/financials?tab=trip-pl">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="text-xs h-8 px-2.5 font-semibold text-blue-700 bg-blue-50/50 border-blue-200 hover:bg-blue-100/60"
+              >
+                <TrendingUp className="h-3.5 w-3.5 mr-1 text-blue-600" />
+                View Trip P&L
+              </Button>
+            </Link>
+          )}
           <Badge
             variant="outline"
             className="text-xs bg-slate-50 text-slate-700 font-semibold px-2.5 py-1"
@@ -80,6 +96,8 @@ export default async function TripExpensesPage({ searchParams }: TripExpensesPag
       <ExpenseLedgerTable
         trips={trips}
         isFleetOwner={isFleetOwner}
+        userRole={session.role}
+        userHubIds={userHubIds}
         userId={session.id}
       />
     </div>

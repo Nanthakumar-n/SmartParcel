@@ -108,7 +108,7 @@ export async function settleTripAction(
   rawInput: unknown
 ): Promise<ActionResult<TripSettlementWithUser>> {
   try {
-    const session = await requireRole(['fleet_owner']);
+    const session = await requireRole(['fleet_owner', 'hub_manager']);
     const parsed = tripExpenseSettleSchema.safeParse(rawInput);
 
     if (!parsed.success) {

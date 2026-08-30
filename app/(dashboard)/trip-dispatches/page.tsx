@@ -1,6 +1,6 @@
 import React from 'react';
 import { Metadata } from 'next';
-import { requireRole } from '@/lib/auth/session';
+import { requireRole, getUserHubIds } from '@/lib/auth/session';
 import { createServerClient } from '@/lib/supabase/server';
 import { getTripsByTenant } from '@/lib/db/trips';
 import { getHubsByTenant } from '@/lib/db/hubs';
@@ -19,6 +19,7 @@ export const metadata: Metadata = {
 export default async function TripDispatchesPage() {
   const session = await requireRole(['fleet_owner', 'hub_manager']);
   const supabase = createServerClient();
+  const userHubIds = await getUserHubIds(session.id);
 
   const [tripsResult, hubsResult, vehiclesResult, driversResult] =
     await Promise.all([
@@ -95,7 +96,12 @@ export default async function TripDispatchesPage() {
       </div>
 
       {/* Trips Table */}
-      <TripTable initialTrips={trips} userRole={session.role} userId={session.id} />
+      <TripTable
+        initialTrips={trips}
+        userRole={session.role}
+        userHubIds={userHubIds}
+        userId={session.id}
+      />
     </div>
   );
 }

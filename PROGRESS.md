@@ -18,6 +18,36 @@
 
 > Next Phase: **Phase 1.5 (Web-only)** — Driver Trip Expense Ledger, WhatsApp Notifications via WATI, Tenant Settings page.
 
+## 🚧 Completed — Revenue Management & Fleet P&L Analytics (Session 8.4 — 2026-08-30)
+
+### Milestone 8.4: Revenue Management & Fleet P&L Dashboard (`/financials`)
+
+- [x] **Financial Data Layer & Service Architecture (`lib/db/financials.ts`, `lib/services/financials.ts`)**:
+  - Pure aggregation queries from `lorry_receipts`, `trip_expenses`, and `to_pay_collections` (zero schema changes).
+  - Computed 7 fleet-wide financial KPIs: Total Booked Revenue, Realized Collections, Outstanding Receivables, Pipeline Snapshot, Operational Road Expenses, Net Operating P/L, and Unsettled Driver Advances.
+  - Receivables Aging calculation: 🟢 0–7 days (Current), 🟡 7–30 days (Due), 🔴 30+ days (Overdue).
+  - Hub P&L breakdown attributing freight revenue to origin hubs (`from_hub_id`) and road costs to trip dispatch hubs.
+  - Trip P&L combining assigned consignment freight revenue against actual road expenses.
+- [x] **Server Actions & Access Control (`app/(dashboard)/financials/actions.ts`)**:
+  - Role-guarded Server Actions for `fleet_owner` role only.
+- [x] **UI Pages & Components (`app/(dashboard)/financials/`)**:
+  - `page.tsx`: Server Component with parallel metric queries, date range picker with 7 quick presets (`Today`, `This Week`, `This Month`, `Last Month`, `This Quarter`, `This Year`, `All Time`), and 3 sub-tabs (`Fleet P&L`, `Hub P&L`, `Trip P&L`).
+  - `loading.tsx`: Skeleton loader for smooth loading states.
+  - `fleet-summary-cards.tsx`: 7 responsive KPI cards with percentage margins and receivables aging analysis panel.
+  - `hub-pl-table.tsx` & `hub-receivables-section.tsx`: Per-hub financial table with inline expandable drawer listing uncollected LRs with customer contacts and aging tags.
+  - `trip-pl-table.tsx`: Comprehensive trip profitability table with status badges, freight totals, expense summaries, and driver advance balance indicators.
+- [x] **Bi-Directional Navigation & Cross-Linking**:
+  - Added "Financials & P/L" link to sidebar navigation (Fleet Owner only).
+  - Added "View Trip P&L" button in `/trip-expenses` header linked directly to `/financials?tab=trip-pl`.
+  - Added "Ledger" button on every Trip P&L row linking back to `/trip-expenses`.
+- [x] **Hub Manager Trip Settlement on Truck Arrival**:
+  - Granted Hub Managers permission to settle trips when the run has arrived at their assigned destination hub (`trip.status === 'COMPLETED'` and `userHubIds.includes(trip.to_hub_id)`).
+  - Migration `20250101000014_hub_manager_settle_permission.sql`: Updated RLS policies for `trip_expense_settlements` and `trip_expenses` update.
+  - Re-opening settled trips remains strictly guarded for Fleet Owners.
+- [x] **Quality Gate**: `npx tsc --noEmit` (0 errors), `npm run lint` (0 warnings), `npm run build` (19/19 routes compiled cleanly), browser subagent verified.
+
+---
+
 ## 🚧 Completed — Backend Data Entry & Seeding Tool (Session 8.3 — 2026-08-29)
 
 ### Milestone 8.3: Comprehensive Multi-Preset Seeding CLI Tool & Lifecycle Datasets

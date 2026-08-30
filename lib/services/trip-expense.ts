@@ -134,22 +134,31 @@ export async function voidTripExpenseService(
 }
 
 /**
- * Service for Fleet Owner to settle a trip.
+ * Service to settle a trip (Fleet Owner anytime, Hub Manager upon arrival at destination hub).
  */
 export async function settleTripService(
   supabase: AnySupabaseClient,
   params: SettleTripParams,
   session: UserSession
 ): Promise<ActionResult<TripExpenseSettlementRow>> {
-  // 1. Enforce Fleet Owner role
-  if (session.role !== 'fleet_owner') {
-    return formError('Only Fleet Owners have permission to settle trips.');
-  }
-
-  // 2. Fetch trip
+  // 1. Fetch trip
   const trip = await getTripById(supabase, params.tripId);
   if (!trip) {
     return formError('Trip not found.');
+  }
+
+  // 2. Enforce Role & Arrival permissions
+  if (session.role === 'hub_manager') {
+    if (trip.status !== 'COMPLETED') {
+      return formError('Hub Managers can only settle a trip once the truck has arrived at the destination (COMPLETED).');
+    }
+
+    const userHubIds = await getUserHubIds(session.id);
+    if (!userHubIds.includes(trip.to_hub_id)) {
+      return formError('Hub Managers can only settle trips arriving at their assigned destination hub.');
+    }
+  } else if (session.role !== 'fleet_owner') {
+    return formError('You do not have permission to settle trips.');
   }
 
   // 3. Verify trip is not already settled

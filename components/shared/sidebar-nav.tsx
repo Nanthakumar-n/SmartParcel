@@ -17,6 +17,7 @@ import {
   CalendarDays,
   ExternalLink,
   Receipt,
+  TrendingUp,
 } from 'lucide-react';
 
 interface NavItem {
@@ -61,6 +62,12 @@ export function SidebarNav() {
   ];
 
   const fleetNavItems: NavItem[] = [
+    {
+      title: 'Financials & P/L',
+      href: '/financials',
+      icon: TrendingUp,
+      fleetOwnerOnly: true,
+    },
     {
       title: 'Hub Branches',
       href: '/hubs',

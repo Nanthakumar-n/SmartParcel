@@ -46,6 +46,8 @@ import { voidTripExpenseAction, reopenSettlementAction } from '../actions';
 interface ExpenseLedgerTableProps {
   trips: TripWithExpenseLedger[];
   isFleetOwner: boolean;
+  userRole?: string;
+  userHubIds?: string[];
   userId: string;
 }
 
@@ -100,6 +102,8 @@ const CATEGORY_STYLES: Record<
 export function ExpenseLedgerTable({
   trips,
   isFleetOwner,
+  userRole,
+  userHubIds,
   userId,
 }: ExpenseLedgerTableProps) {
   const [selectedTripId, setSelectedTripId] = useState<string>(
@@ -270,7 +274,10 @@ export function ExpenseLedgerTable({
                   <span>Add Entry</span>
                 </Button>
 
-                {isFleetOwner && (
+                {(isFleetOwner ||
+                  (userRole === 'hub_manager' &&
+                    activeTrip.status === 'COMPLETED' &&
+                    userHubIds?.includes(activeTrip.to_hub.id))) && (
                   <Button
                     size="sm"
                     onClick={() => setSettleDialogOpen(true)}
