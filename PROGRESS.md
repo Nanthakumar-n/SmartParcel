@@ -448,9 +448,28 @@ Paste this as your opening message in the next chat:
 - [x] **Quality Gate & Verification**:
   - `npx tsc --noEmit`: ✅ 0 errors.
   - `npm run lint`: ✅ 0 warnings, 0 errors.
-  - `npm run build`: ✅ All 18 routes compiled and built successfully.
-  - Browser UI verification:
-    - Verified advance & road expense entries, live net balance calculation, soft-voiding with recalculation.
-    - Verified settlement closing row, final balance recording (`₹0.00` outstanding), and re-open workflow.
-    - Verified Desktop (1440×900) and Mobile (375×812) responsiveness with zero horizontal overflow.
+---
+
+## 🔲 Up Next — Phase 1.5 Remaining Features
+
+### 1. WhatsApp Notifications via WATI (Edge Functions + DB Webhooks)
+- Automatic notifications on LR creation (`BOOKED`), in-transit departure (`IN_TRANSIT`), and delivery confirmation (`DELIVERED`).
+- Idempotent notification logging table (`whatsapp_notifications_log`).
+- WATI REST API payload formatting for Indian numbers (+91).
+
+### 2. Tenant Settings Page (`/settings`)
+- Tenant branding & company details (Company name, logo, contact, GSTIN).
+- Default LR terms & conditions editor.
+- Hub sequence prefix management.
+
+---
+
+## 🚀 How to Start Next Session
+
+Paste this prompt to kick off the next session:
+
+```
+Read CONTEXT.md, .agents/AGENTS.md, and PROGRESS.md. Run /session-lifecycle to start the development session.
+```
+
 
