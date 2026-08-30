@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "db:seed": "npx tsx scripts/seed/index.ts --preset=full",
+    "db:seed:base": "npx tsx scripts/seed/index.ts --preset=base",
+    "db:seed:ops": "npx tsx scripts/seed/index.ts --preset=ops",
+    "db:seed:append": "npx tsx scripts/seed/index.ts --preset=full --append"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

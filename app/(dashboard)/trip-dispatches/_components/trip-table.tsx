@@ -27,9 +27,10 @@ import { formatDateIST } from '@/lib/utils/format-date';
 interface TripTableProps {
   initialTrips: TripWithRelations[];
   userRole?: string;
+  userId?: string;
 }
 
-export function TripTable({ initialTrips, userRole }: TripTableProps) {
+export function TripTable({ initialTrips, userRole, userId }: TripTableProps) {
   const [trips, setTrips] = useState<TripWithRelations[]>(initialTrips);
   const [selectedTrip, setSelectedTrip] = useState<TripWithRelations | null>(null);
   const [manifestOpen, setManifestOpen] = useState(false);
@@ -231,6 +232,7 @@ export function TripTable({ initialTrips, userRole }: TripTableProps) {
         trip={selectedTrip}
         open={manifestOpen}
         userRole={userRole}
+        userId={userId}
         onOpenChange={setManifestOpen}
       />
     </div>

@@ -82,14 +82,14 @@ Current operations rely heavily on physical paper waybills (Lorry Receipts / *Bu
 ### Phase 1.5 — Web-Only Sprint (No Flutter Required)
 **Goal:** Close the most painful operational gaps for fleet owners before mobile development begins.
 
-#### Driver Trip Expense Ledger
+#### Driver Trip Expense Ledger ✅ COMPLETE
 | Feature | Notes |
 |---|---|
 | `trip_expenses` table | Positive amounts = advance given to driver; negative = expense incurred. Categories: `ADVANCE`, `FUEL`, `TOLL`, `MAINTENANCE`, `BHATTA`, `LABOUR`, `MISC` |
 | `trip_expense_settlements` table | One settlement record per trip; net balance auto-computed; settlement mode: `CASH` / `UPI` / `BANK_TRANSFER` |
-| Expense summary in Trip Dispatch | New "Expenses" tab in existing trip side-drawer; running balance shown with color coding |
-| Dedicated `/trip-expenses` route | Full per-trip ledger, all categories, running balance, "Settle Trip" action |
-| RBAC | Both Fleet Owner and Hub Manager can add entries; only Fleet Owner can settle a trip |
+| Expense summary in Trip Dispatch | New "Expenses" tab in existing trip side-drawer; running balance shown with color coding and settlement closing row |
+| Dedicated `/trip-expenses` route | Full per-trip ledger, all categories, running balance, "Settle Trip" action, settlement balancing row, and re-open capability |
+| RBAC | Both Fleet Owner and Hub Manager can add entries; only Fleet Owner can settle/re-open a trip |
 | Dashboard widget | Unsettled trips count + total outstanding balance on Fleet Owner dashboard |
 
 #### WhatsApp Notifications via WATI
@@ -454,3 +454,37 @@ Format: `{HUB_CODE}-{YYYY}-{6-digit zero-padded sequence}`
 
 ## 20. Freight Pricing (v1)
 Hub Manager manually enters the final freight amount (₹) when creating an LR. No automatic rate card in v1. Amount stored in **paise** (bigint integer).
+
+---
+
+## 21. Development & Testing Seed Data
+
+A comprehensive CLI seeding tool (`scripts/seed/index.ts`) populates realistic Indian logistics datasets, multi-hub manager logins, and entities across all lifecycle states.
+
+### CLI Seeding Commands
+| Command | Preset / Mode | Description |
+|---|---|---|
+| `npm run db:seed` | `full` (Default) | Cleans previous transactions & seeds a complete ecosystem across all lifecycle states. |
+| `npm run db:seed:base` | `base` | Seeds Tenant, 4 Users, 3 Hubs, 4 Vehicles, and 4 Drivers without transactions. |
+| `npm run db:seed:ops` | `ops` | Focuses on active operational queues (Pending Bookings + Pool `BOOKED` LRs + Scheduled Trips). |
+| `npm run db:seed:append` | `append` | Runs full seed on top of existing database records without wiping. |
+
+### Seeded Test Logins (Default Password: `Password123!`)
+- **Fleet Owner**: `kishore@patelroadways.com` *(All Hubs / Tenant Admin)*
+- **Mumbai Hub Manager**: `mum.manager@patelroadways.com` *(Assigned to `MUM` Hub)*
+- **Delhi Hub Manager**: `del.manager@patelroadways.com` *(Assigned to `DEL` Hub)*
+- **Bangalore Hub Manager**: `blr.manager@patelroadways.com` *(Assigned to `BLR` Hub)*
+
+### Seeded Datasets & Scenarios
+1. **Hubs**: Mumbai Central (`MUM`), Delhi North (`DEL`), Bangalore Electronic City (`BLR`).
+2. **Fleet**: 4 Drivers (with Indian DL numbers) and 4 Vehicles (TRUCK, MINI_TRUCK, TEMPO with `current_hub_id` and driver assignments).
+3. **Customer Booking Requests**: 2 `PENDING` bookings ready for conversion, 1 `REJECTED` booking.
+4. **Lorry Receipts Across Lifecycle**:
+   - `BOOKED` (Pool & Scheduled)
+   - `IN_TRANSIT` (Active highway freight)
+   - `ARRIVED` (Stationed at destination hub)
+   - `DELIVERED` (With signed PODs and collected To-Pay cash/UPI records)
+   - `CANCELLED` (With audit trail notes)
+5. **Trips**: `SCHEDULED`, `IN_TRANSIT`, `COMPLETED` with vehicle location sync.
+6. **Trip Expense Ledgers (Phase 1.5)**: Active in-transit trip ledger (advances, fuel, toll, bhatta), settled trip ledger (UPI), and unsettled completed trip ledger for settlement testing.
+

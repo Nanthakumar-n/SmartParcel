@@ -16,6 +16,7 @@ import {
   UserCheck,
   CalendarDays,
   ExternalLink,
+  Receipt,
 } from 'lucide-react';
 
 interface NavItem {
@@ -46,6 +47,11 @@ export function SidebarNav() {
       title: 'Trip Dispatches',
       href: '/trip-dispatches',
       icon: Truck,
+    },
+    {
+      title: 'Trip Expenses',
+      href: '/trip-expenses',
+      icon: Receipt,
     },
     {
       title: 'Booking Requests',

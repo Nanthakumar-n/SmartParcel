@@ -635,6 +635,164 @@ export type Database = {
           },
         ]
       }
+      trip_expense_settlements: {
+        Row: {
+          created_at: string
+          id: string
+          net_balance: number
+          notes: string | null
+          settled_at: string
+          settled_by: string
+          settlement_mode: string
+          tenant_id: string
+          trip_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          net_balance: number
+          notes?: string | null
+          settled_at?: string
+          settled_by: string
+          settlement_mode?: string
+          tenant_id: string
+          trip_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          net_balance?: number
+          notes?: string | null
+          settled_at?: string
+          settled_by?: string
+          settlement_mode?: string
+          tenant_id?: string
+          trip_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trip_expense_settlements_settled_by_fkey"
+            columns: ["settled_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trip_expense_settlements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trip_expense_settlements_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: true
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trip_expenses: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          description: string | null
+          driver_id: string | null
+          entered_at: string
+          entered_by: string
+          id: string
+          is_voided: boolean
+          settlement_id: string | null
+          tenant_id: string
+          trip_id: string
+          updated_at: string
+          voided_at: string | null
+          voided_by: string | null
+        }
+        Insert: {
+          amount: number
+          category: string
+          created_at?: string
+          description?: string | null
+          driver_id?: string | null
+          entered_at?: string
+          entered_by: string
+          id?: string
+          is_voided?: boolean
+          settlement_id?: string | null
+          tenant_id: string
+          trip_id: string
+          updated_at?: string
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          description?: string | null
+          driver_id?: string | null
+          entered_at?: string
+          entered_by?: string
+          id?: string
+          is_voided?: boolean
+          settlement_id?: string | null
+          tenant_id?: string
+          trip_id?: string
+          updated_at?: string
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_trip_expenses_settlement"
+            columns: ["settlement_id"]
+            isOneToOne: false
+            referencedRelation: "trip_expense_settlements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trip_expenses_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "drivers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trip_expenses_entered_by_fkey"
+            columns: ["entered_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trip_expenses_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trip_expenses_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trip_expenses_voided_by_fkey"
+            columns: ["voided_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trip_schedules: {
         Row: {
           created_at: string

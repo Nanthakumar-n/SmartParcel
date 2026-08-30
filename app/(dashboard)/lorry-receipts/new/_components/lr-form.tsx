@@ -409,7 +409,7 @@ export function LRForm({
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {/* Origin Hub */}
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 min-w-0">
                 <Label className="text-xs font-semibold text-slate-700">
                   Origin Hub (From) <span className="text-red-500">*</span>
                 </Label>
@@ -422,13 +422,13 @@ export function LRForm({
                       onValueChange={(val) => field.onChange(val ?? '')}
                       disabled={isSubmitting || (userRole === 'hub_manager' && originHubs.length === 1)}
                     >
-                      <SelectTrigger className="text-xs h-9">
+                      <SelectTrigger className="text-xs h-9 w-full min-w-0 overflow-hidden">
                         {(() => {
                           const hub = originHubs.find((h) => h.id === field.value);
                           return hub ? (
-                            <span className="flex items-center">
-                              <span className="font-mono font-bold text-blue-600 mr-1.5">[{hub.hub_code}]</span>
-                              {hub.city} - {hub.name}
+                            <span className="flex items-center truncate min-w-0">
+                              <span className="font-mono font-bold text-blue-600 mr-1.5 shrink-0">[{hub.hub_code}]</span>
+                              <span className="truncate">{hub.city} - {hub.name}</span>
                             </span>
                           ) : <SelectValue placeholder="Select origin hub" />;
                         })()}
@@ -454,7 +454,7 @@ export function LRForm({
               </div>
 
               {/* Destination Hub */}
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 min-w-0">
                 <Label className="text-xs font-semibold text-slate-700">
                   Destination Hub (To) <span className="text-red-500">*</span>
                 </Label>
@@ -467,13 +467,13 @@ export function LRForm({
                       onValueChange={(val) => field.onChange(val ?? '')}
                       disabled={isSubmitting}
                     >
-                      <SelectTrigger className="text-xs h-9">
+                      <SelectTrigger className="text-xs h-9 w-full min-w-0 overflow-hidden">
                         {(() => {
                           const hub = activeHubs.find((h) => h.id === field.value);
                           return hub ? (
-                            <span className="flex items-center">
-                              <span className="font-mono font-bold text-emerald-600 mr-1.5">[{hub.hub_code}]</span>
-                              {hub.city} - {hub.name}
+                            <span className="flex items-center truncate min-w-0">
+                              <span className="font-mono font-bold text-emerald-600 mr-1.5 shrink-0">[{hub.hub_code}]</span>
+                              <span className="truncate">{hub.city} - {hub.name}</span>
                             </span>
                           ) : <SelectValue placeholder="Select destination hub" />;
                         })()}
@@ -499,7 +499,7 @@ export function LRForm({
               </div>
 
               {/* Booking Date */}
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 min-w-0">
                 <Label htmlFor="booking_date" className="text-xs font-semibold text-slate-700">
                   Booking Date <span className="text-red-500">*</span>
                 </Label>
@@ -508,7 +508,7 @@ export function LRForm({
                   type="date"
                   {...register('booking_date')}
                   disabled={isSubmitting}
-                  className="text-xs h-9"
+                  className="text-xs h-9 w-full"
                 />
                 {errors.booking_date && (
                   <p className="text-[11px] text-red-500 font-medium">
@@ -536,7 +536,7 @@ export function LRForm({
                 </div>
 
                 {matchingTrips.length > 0 && (
-                  <div className="w-full sm:w-64">
+                  <div className="w-full sm:w-72">
                     <Controller
                       control={control}
                       name="trip_id"
@@ -545,8 +545,26 @@ export function LRForm({
                           value={field.value || 'none'}
                           onValueChange={(val) => field.onChange(val === 'none' || !val ? '' : val)}
                         >
-                          <SelectTrigger className="text-xs h-8 bg-white">
-                            <SelectValue placeholder="Select Trip Assignment" />
+                          <SelectTrigger className="text-xs h-8 bg-white w-full min-w-0 overflow-hidden">
+                            {(() => {
+                              if (!field.value || field.value === 'none') {
+                                return <span className="text-slate-500 truncate">Unassigned (Slot later)</span>;
+                              }
+                              const trip = matchingTrips.find((t) => t.id === field.value);
+                              if (!trip) {
+                                return <span className="text-slate-400">Select Trip Assignment</span>;
+                              }
+                              return (
+                                <span className="flex items-center truncate min-w-0">
+                                  <span className="font-mono font-bold text-slate-800 mr-1.5 shrink-0">
+                                    {trip.vehicle?.registration_number || 'Truck'}
+                                  </span>
+                                  {trip.driver && (
+                                    <span className="text-slate-500 truncate">({trip.driver.full_name})</span>
+                                  )}
+                                </span>
+                              );
+                            })()}
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="none" className="text-xs">
@@ -554,10 +572,12 @@ export function LRForm({
                             </SelectItem>
                             {matchingTrips.map((trip) => (
                               <SelectItem key={trip.id} value={trip.id} className="text-xs">
-                                <span className="font-mono font-bold">
+                                <span className="font-mono font-bold text-slate-800 mr-1.5">
                                   {trip.vehicle?.registration_number || 'Truck'}
                                 </span>
-                                {trip.driver && ` (${trip.driver.full_name})`}
+                                {trip.driver && (
+                                  <span className="text-slate-500">({trip.driver.full_name})</span>
+                                )}
                               </SelectItem>
                             ))}
                           </SelectContent>

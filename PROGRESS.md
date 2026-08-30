@@ -18,6 +18,31 @@
 
 > Next Phase: **Phase 1.5 (Web-only)** — Driver Trip Expense Ledger, WhatsApp Notifications via WATI, Tenant Settings page.
 
+## 🚧 Completed — Backend Data Entry & Seeding Tool (Session 8.3 — 2026-08-29)
+
+### Milestone 8.3: Comprehensive Multi-Preset Seeding CLI Tool & Lifecycle Datasets
+
+- [x] **Backend Seeder Architecture (`scripts/seed/`)**:
+  - `cleaner.ts`: Foreign-key safe transaction data purger for clean reset runs.
+  - `fixtures.ts`: Authentic Indian logistics domain fixtures (Shippers, Consignees, GSTINs, Goods, Rates, Drivers, Vehicles, Hubs).
+  - `seeders/auth-users.ts`: Creates Fleet Owner (`kishore@patelroadways.com`) and Hub Managers (`mum.manager@patelroadways.com`, `del.manager@patelroadways.com`, `blr.manager@patelroadways.com`) with custom JWT claims + `user_hub_assignments`.
+  - `seeders/hubs.ts`: MUM, DEL, BLR hubs with `lr_sequences` initialization.
+  - `seeders/fleet.ts`: 4 vehicles (with `current_hub_id` stationing) and 4 drivers (with Indian DL numbers).
+  - `seeders/bookings.ts`: Pending and rejected online booking requests with unique collision-free references.
+  - `seeders/lrs.ts`: LRs across entire lifecycle (`BOOKED` pool, `BOOKED` scheduled, `IN_TRANSIT`, `ARRIVED`, `DELIVERED` with PODs/collections, `CANCELLED` with audit trail).
+  - `seeders/trips.ts`: `SCHEDULED`, `IN_TRANSIT`, and `COMPLETED` trips with vehicle location & status synchronization.
+  - `seeders/expenses.ts`: Phase 1.5 Driver Trip Expense Ledgers (in-transit active ledger, completed settled ledger, completed unsettled ledger).
+  - `index.ts`: Master CLI orchestrator with flags (`--preset=full|base|ops`, `--append`, `--tenant=<slug>`) and summary tables.
+- [x] **NPM Command Shortcuts in `package.json`**:
+  - `npm run db:seed`: Full clean reset & complete ecosystem seed.
+  - `npm run db:seed:base`: Base infrastructure (Tenant, Users, Hubs, Fleet) without transactions.
+  - `npm run db:seed:ops`: Operational queues focus (Pending Bookings + Pool LRs + Scheduled Trips).
+  - `npm run db:seed:append`: Non-destructive append mode.
+- [x] **Documentation & Lifecycle Updates**:
+  - Added Section 21 to `CONTEXT.md` documenting CLI seed commands, logins, and datasets.
+  - Updated `.agents/skills/session-lifecycle/SKILL.md` Step 4 to automatically prepare environment with seed data.
+- [x] **Quality Gate**: `npx tsc --noEmit` (0 errors), `npm run lint` (0 warnings), `npm run build` (18/18 routes compiled cleanly).
+
 ---
 
 ## 🚧 Completed — Operations & Manifest Enhancements (Session 8.2 — 2026-08-27)
@@ -354,3 +379,48 @@ Paste this as your opening message in the next chat:
   - Verified thermal bill modal dialog for waybill receipts.
   - Verified dynamic hiding of onboarding checklist and display of Operations Overview.
   - Verified mobile responsiveness (375×812) with zero horizontal overflow.
+
+---
+
+## ✅ Completed (Session 7 — 2026-08-29)
+
+### Phase 1.5 Feature 1: Driver Trip Expense Ledger (`trip_expenses`, `trip_expense_settlements`)
+- [x] **Database Migration & RLS Security (`supabase/migrations/20250101000013_trip_expenses.sql`)**:
+  - `trip_expenses` table: Multi-tenant RLS, immutable append-only with soft-void (`is_voided`, `voided_by`, `voided_at`), categories: `ADVANCE`, `FUEL`, `TOLL`, `MAINTENANCE`, `BHATTA`, `LABOUR`, `MISC`. Signed amounts stored in paise (+ for advances, - for road expenses).
+  - `trip_expense_settlements` table: Multi-tenant RLS with `UNIQUE(trip_id)`, payment modes: `CASH`, `UPI`, `BANK_TRANSFER`, Fleet Owner only settlement permission.
+  - Performance indexes on `(tenant_id, trip_id)`, `(trip_id, entered_at)`, `(driver_id)`, `(settlement_id)`.
+- [x] **TypeScript Types & Validation**:
+  - Regenerated Supabase schema types in `lib/types/supabase.ts`.
+  - `lib/validations/trip-expense.ts`: Zod validation for expense creation, amount validation, mandatory remarks for `MISC`, settlement schema with payment modes, voiding schema.
+- [x] **Database Query Helpers & Service Architecture**:
+  - `lib/db/trip-expenses.ts`: Database query helpers with typed relations, running net balance calculations, unsettled summary aggregations.
+  - `lib/services/trip-expense.ts`: Service layer enforcing RBAC (`fleet_owner` vs `hub_manager`), origin hub scoping, immutable soft-void rules, settlement calculation, re-open ledger workflows.
+  - `app/(dashboard)/trip-expenses/actions.ts`: Server Actions returning `ActionResult<T>` with path revalidation (`/trip-expenses`, `/trip-dispatches`, `/dashboard`).
+- [x] **UI Components & Pages**:
+  - `app/(dashboard)/trip-expenses/page.tsx`: Dedicated ledger page with trip switcher tabs, live summary balance cards (Cash Advances, Road Expenses, Running Net Balance), and detailed table.
+  - `app/(dashboard)/trip-expenses/loading.tsx`: Skeleton loader matching dashboard design system.
+  - `app/(dashboard)/trip-expenses/_components/add-expense-dialog.tsx`: Keyboard-first dialog for recording advances and expenses.
+  - `app/(dashboard)/trip-expenses/_components/settle-trip-dialog.tsx`: Settlement dialog with driver-owes vs company-owes summary and payment mode selector.
+  - `app/(dashboard)/trip-dispatches/_components/manifest-panel.tsx`: Integrated "Expenses" tab into trip side-drawer with live running balance and quick settle/void actions.
+  - `components/shared/sidebar-nav.tsx`: Added "Trip Expenses" navigation link under Operations.
+  - `app/(dashboard)/dashboard/_components/dashboard-metric-cards.tsx`: Added 5th metric card for "Unsettled Trips".
+- [x] **Settlement Ledger Balance Recording & Closing Row Enhancement**:
+  - `app/(dashboard)/trip-expenses/_components/expense-ledger-table.tsx`:
+    - Added dedicated **`SETTLEMENT`** closing entry row to the ledger table showing cleared amount, payment mode, direction, and timestamp.
+    - Updated Summary Card 3 to display **`Final Settlement Balance: ₹0.00`** with green status and cleared summary subtext.
+    - Enhanced Settlement Cleared Banner with prominent amount, direction badge, payment mode, and note preview.
+  - `app/(dashboard)/trip-dispatches/_components/manifest-panel.tsx`:
+    - Mirrored settlement closing item, zero balance status, and cleared banner in the manifest side-drawer.
+- [x] **LR Creation Form UI Fixes (`/lorry-receipts/new`)**:
+  - `app/(dashboard)/lorry-receipts/new/_components/lr-form.tsx`:
+    - Resolved hub information text overlap across grid columns by applying `min-w-0` to grid cells, `w-full min-w-0 overflow-hidden` to `SelectTrigger`, and text truncation with ellipsis.
+    - Resolved trip selector raw UUID display bug by dynamically rendering human-readable vehicle registration and driver name: `[MH 12 AB 1234] (Driver Name)` or `Unassigned (Slot later)`.
+- [x] **Quality Gate & Verification**:
+  - `npx tsc --noEmit`: ✅ 0 errors.
+  - `npm run lint`: ✅ 0 warnings, 0 errors.
+  - `npm run build`: ✅ All 18 routes compiled and built successfully.
+  - Browser UI verification:
+    - Verified advance & road expense entries, live net balance calculation, soft-voiding with recalculation.
+    - Verified settlement closing row, final balance recording (`₹0.00` outstanding), and re-open workflow.
+    - Verified Desktop (1440×900) and Mobile (375×812) responsiveness with zero horizontal overflow.
+

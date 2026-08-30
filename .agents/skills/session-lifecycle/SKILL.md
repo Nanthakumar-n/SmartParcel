@@ -40,7 +40,14 @@ Execute these steps at the beginning of every session before writing any feature
   ```
   *(Verify response at `http://localhost:3000`).*
 
-### 4. Git Alignment
+### 4. Development Database Seeding
+- [ ] Prepare test data and ensure demo records & logins exist:
+  ```bash
+  npm run db:seed:append # Appends fresh demo records while preserving existing database state
+  ```
+  *(Use `npm run db:seed` for a full clean reset, or `npm run db:seed:ops` for operational queues only).*
+
+### 5. Git Alignment
 - [ ] Check repository status:
   ```bash
   git status

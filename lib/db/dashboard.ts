@@ -16,6 +16,8 @@ export interface DashboardMetrics {
   activeDriversCount: number;
   activeTripsCount: number;
   monthlyFreightPaise: number;
+  unsettledTripsCount: number;
+  unsettledTripsBalancePaise: number;
   onboardingStatus: {
     hasWorkspace: boolean;
     hasHubs: boolean;
@@ -51,6 +53,7 @@ export async function getDashboardMetrics(
     activeDriversRes,
     activeTripsRes,
     monthlyFreightLrsRes,
+    unsettledExpensesRes,
   ] = await Promise.all([
     // Active LRs in system (in pipeline, excluding terminal DELIVERED and CANCELLED)
     supabase
@@ -118,6 +121,13 @@ export async function getDashboardMetrics(
       .select('freight_amount')
       .gte('booking_date', firstDayOfMonth)
       .neq('status', 'CANCELLED'),
+
+    // Unsettled trip expenses (non-voided expenses without settlement)
+    supabase
+      .from('trip_expenses')
+      .select('trip_id, amount')
+      .eq('is_voided', false)
+      .is('settlement_id', null),
   ]);
 
   const activeLRCount = activeLrsRes.count ?? 0;
@@ -135,6 +145,15 @@ export async function getDashboardMetrics(
   const monthlyFreightRows = monthlyFreightLrsRes.data ?? [];
   const monthlyFreightPaise = monthlyFreightRows.reduce(
     (acc, row) => acc + (Number(row.freight_amount) || 0),
+    0
+  );
+
+  // Calculate unsettled trips and net balance
+  const unsettledRows = unsettledExpensesRes.data ?? [];
+  const uniqueUnsettledTripIds = new Set(unsettledRows.map((r) => r.trip_id));
+  const unsettledTripsCount = uniqueUnsettledTripIds.size;
+  const unsettledTripsBalancePaise = unsettledRows.reduce(
+    (acc, row) => acc + (Number(row.amount) || 0),
     0
   );
 
@@ -167,6 +186,8 @@ export async function getDashboardMetrics(
     activeDriversCount,
     activeTripsCount,
     monthlyFreightPaise,
+    unsettledTripsCount,
+    unsettledTripsBalancePaise,
     onboardingStatus: {
       hasWorkspace,
       hasHubs,

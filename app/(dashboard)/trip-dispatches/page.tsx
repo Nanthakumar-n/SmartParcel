@@ -95,7 +95,7 @@ export default async function TripDispatchesPage() {
       </div>
 
       {/* Trips Table */}
-      <TripTable initialTrips={trips} userRole={session.role} />
+      <TripTable initialTrips={trips} userRole={session.role} userId={session.id} />
     </div>
   );
 }
