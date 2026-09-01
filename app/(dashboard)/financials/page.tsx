@@ -9,12 +9,13 @@ import {
   type DateRangeFilter,
 } from '@/lib/db/financials';
 import { DateRangePicker, type DatePreset } from './_components/date-range-picker';
+import { FinancialsTabs, type FinancialsTabId } from './_components/financials-tabs';
 import { FleetPLTab } from './_components/fleet-pl-tab';
 import { HubPLTab } from './_components/hub-pl-tab';
 import { TripPLTab } from './_components/trip-pl-tab';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, Building2, Truck, DollarSign } from 'lucide-react';
+import { DollarSign, ShieldCheck } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export const metadata: Metadata = {
   title: 'Revenue Management & Fleet P/L | SmartParcel Logistics',
@@ -45,7 +46,7 @@ export default async function FinancialsPage({ searchParams }: FinancialsPagePro
   await requireRole(['fleet_owner']);
   const supabase = createServerClient();
 
-  const currentTab = searchParams?.tab || 'fleet-pl';
+  const currentTab = (searchParams?.tab as FinancialsTabId) || 'fleet-pl';
   const preset = searchParams?.preset || 'month';
 
   let dateFrom = searchParams?.from;
@@ -70,91 +71,76 @@ export default async function FinancialsPage({ searchParams }: FinancialsPagePro
     getTripPLByTenant(supabase, dateRange),
   ]);
 
+  const isNetPositive = fleetMetrics.netPLPaise >= 0;
+
   return (
-    <div className="space-y-6">
-      {/* Top Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-lg border border-slate-200 shadow-2xs">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
-              <DollarSign className="h-5 w-5" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-                Revenue Management & Profit / Loss
-              </h1>
-              <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-                Financial performance, collections, receivables aging, and profitability analytics across your fleet.
-              </p>
-            </div>
+    <div className="w-full space-y-6 pb-12">
+      {/* Top Banner Ribbon */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-xl border border-slate-200 shadow-2xs">
+        <div className="flex items-center gap-3.5">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 border border-blue-200 text-blue-700 shadow-2xs shrink-0">
+            <DollarSign className="h-6 w-6" />
+          </div>
+          <div>
+            <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+              <span>Revenue Management & Fleet P/L</span>
+              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs font-semibold gap-1">
+                <ShieldCheck className="h-3 w-3" />
+                <span>Executive Ledger</span>
+              </Badge>
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+              Consolidated profit & loss statement, cash realization rate, receivables aging, and route-level cost analytics.
+            </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           <Badge
             variant="outline"
-            className="text-xs bg-slate-50 text-slate-700 font-semibold px-2.5 py-1"
+            className="text-xs bg-slate-50 text-slate-700 font-semibold px-2.5 py-1 font-mono border-slate-200"
           >
-            {hubRows.length} Hubs Active
+            {hubRows.length} Branch Hubs
           </Badge>
           <Badge
             variant="outline"
-            className={`text-xs font-semibold px-2.5 py-1 ${
-              fleetMetrics.netPLPaise >= 0
-                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                : 'bg-rose-50 text-rose-700 border-rose-200'
-            }`}
+            className={cn(
+              'text-xs font-bold px-2.5 py-1',
+              isNetPositive
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                : 'bg-rose-50 text-rose-700 border-rose-300'
+            )}
           >
-            Margin: {fleetMetrics.profitMarginPercent}%
+            Margin: {fleetMetrics.profitMarginPercent}% Net
           </Badge>
         </div>
       </div>
 
-      {/* Date Range Picker Toolbar */}
+      {/* Date Range Picker Filter Strip */}
       <DateRangePicker
         currentPreset={preset}
         dateFrom={dateFrom || ''}
         dateTo={dateTo || ''}
       />
 
-      {/* Sub-Tabs: Fleet P&L / Hub P&L / Trip P&L */}
-      <Tabs defaultValue={currentTab} className="space-y-6">
-        <TabsList className="bg-slate-100/90 p-1 border border-slate-200 grid grid-cols-3 w-full sm:w-auto sm:inline-flex">
-          <TabsTrigger
-            value="fleet-pl"
-            className="text-xs font-semibold data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow-xs flex items-center justify-center gap-1.5"
-          >
-            <TrendingUp className="h-3.5 w-3.5" />
-            <span>Fleet P&L</span>
-          </TabsTrigger>
-          <TabsTrigger
-            value="hub-pl"
-            className="text-xs font-semibold data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow-xs flex items-center justify-center gap-1.5"
-          >
-            <Building2 className="h-3.5 w-3.5" />
-            <span>Hub P&L</span>
-          </TabsTrigger>
-          <TabsTrigger
-            value="trip-pl"
-            className="text-xs font-semibold data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow-xs flex items-center justify-center gap-1.5"
-          >
-            <Truck className="h-3.5 w-3.5" />
-            <span>Trip P&L</span>
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="fleet-pl" className="m-0 focus-visible:outline-none">
+      {/* Excel Workbook Sheet Tabs */}
+      <FinancialsTabs
+        activeTab={currentTab}
+        hubCount={hubRows.length}
+        tripCount={tripRows.length}
+      >
+        {currentTab === 'fleet-pl' && (
           <FleetPLTab metrics={fleetMetrics} />
-        </TabsContent>
+        )}
 
-        <TabsContent value="hub-pl" className="m-0 focus-visible:outline-none">
+        {currentTab === 'hub-pl' && (
           <HubPLTab hubRows={hubRows} dateRange={dateRange} />
-        </TabsContent>
+        )}
 
-        <TabsContent value="trip-pl" className="m-0 focus-visible:outline-none">
+        {currentTab === 'trip-pl' && (
           <TripPLTab trips={tripRows} />
-        </TabsContent>
-      </Tabs>
+        )}
+      </FinancialsTabs>
     </div>
   );
 }

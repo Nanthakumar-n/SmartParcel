@@ -9,7 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { paiseToCurrency } from '@/lib/utils/format-currency';
 import { formatPhoneDisplay } from '@/lib/utils/format-phone';
-import { Truck, ArrowRight, TrendingUp, TrendingDown, ExternalLink, Search } from 'lucide-react';
+import { ArrowRight, TrendingUp, TrendingDown, ExternalLink, Search, Layers } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface TripPLTableProps {
   trips: TripPLRow[];
@@ -33,7 +34,7 @@ export function TripPLTable({ trips }: TripPLTableProps) {
           t.toHub.city.toLowerCase().includes(s);
         const matchesVehicle = t.vehicle?.registration_number.toLowerCase().includes(s);
         const matchesDriver = t.driver?.full_name.toLowerCase().includes(s);
-        return matchesRoute || matchesVehicle || matchesDriver;
+        return Boolean(matchesRoute || matchesVehicle || matchesDriver);
       }
       return true;
     });
@@ -44,114 +45,94 @@ export function TripPLTable({ trips }: TripPLTableProps) {
   const totalNet = filteredTrips.reduce((sum, t) => sum + t.netPLPaise, 0);
 
   return (
-    <div className="space-y-4">
-      {/* Search & Filter Toolbar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-3 rounded-lg border border-slate-200 shadow-2xs">
+    <div className="w-full space-y-4">
+      {/* Search & Status Filter Toolbar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-slate-50/70 p-3 rounded-xl border border-slate-200/80 shadow-2xs">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
           <Input
-            placeholder="Search by route, vehicle, driver..."
+            placeholder="Search route code, vehicle reg, driver..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-8 text-xs h-8"
+            className="pl-8 text-xs h-8 bg-white border-slate-200 focus-visible:ring-blue-500"
           />
         </div>
 
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-          <Button
-            type="button"
-            variant={statusFilter === 'ALL' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setStatusFilter('ALL')}
-            className="text-xs h-7 px-2.5"
-          >
-            All Trips ({trips.length})
-          </Button>
-          <Button
-            type="button"
-            variant={statusFilter === 'IN_TRANSIT' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setStatusFilter('IN_TRANSIT')}
-            className="text-xs h-7 px-2.5"
-          >
-            In Transit
-          </Button>
-          <Button
-            type="button"
-            variant={statusFilter === 'COMPLETED' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setStatusFilter('COMPLETED')}
-            className="text-xs h-7 px-2.5"
-          >
-            Completed
-          </Button>
-          <Button
-            type="button"
-            variant={statusFilter === 'SCHEDULED' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setStatusFilter('SCHEDULED')}
-            className="text-xs h-7 px-2.5"
-          >
-            Scheduled
-          </Button>
+        <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0 bg-slate-200/60 p-1 rounded-lg">
+          {(['ALL', 'IN_TRANSIT', 'COMPLETED', 'SCHEDULED'] as const).map((st) => {
+            const isSelected = statusFilter === st;
+            const label = st === 'ALL' ? `All (${trips.length})` : st === 'IN_TRANSIT' ? 'In Transit' : st === 'COMPLETED' ? 'Completed' : 'Scheduled';
+            return (
+              <button
+                key={st}
+                type="button"
+                onClick={() => setStatusFilter(st)}
+                className={cn(
+                  'px-2.5 py-1 text-xs font-semibold rounded-md transition-all shrink-0 select-none',
+                  isSelected
+                    ? 'bg-white text-blue-700 shadow-2xs font-bold'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-300/40'
+                )}
+              >
+                {label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Main Table */}
-      <div className="bg-white rounded-lg border border-slate-200 shadow-2xs overflow-hidden">
-        <div className="p-4 border-b border-slate-200 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Truck className="h-4 w-4 text-blue-600" />
-            <h3 className="text-sm font-bold text-slate-900 tracking-tight">
-              Trip-Level Revenue, Cost & Profitability Statement
-            </h3>
-          </div>
-          <span className="text-xs text-slate-500">
-            Showing {filteredTrips.length} trips
-          </span>
-        </div>
-
+      {/* Spreadsheet Table */}
+      <div className="rounded-xl border border-slate-200/90 overflow-hidden shadow-2xs bg-white">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow className="bg-slate-50 text-[11px] font-bold text-slate-600 uppercase tracking-wider">
-                <TableHead>Route Corridor</TableHead>
-                <TableHead>Vehicle & Driver</TableHead>
-                <TableHead className="text-center">Status</TableHead>
-                <TableHead className="text-center">Manifest</TableHead>
-                <TableHead className="text-right">Freight Revenue</TableHead>
-                <TableHead className="text-right">Road Expenses</TableHead>
-                <TableHead className="text-right">Net Trip P/L</TableHead>
-                <TableHead className="text-right">Driver Balance</TableHead>
-                <TableHead className="text-right w-[110px]">Action</TableHead>
+              <TableRow className="bg-slate-50/80 text-[11px] font-bold text-slate-600 uppercase tracking-wider border-b border-slate-200">
+                <TableHead className="font-semibold text-slate-700">Route Corridor</TableHead>
+                <TableHead className="font-semibold text-slate-700">Vehicle & Driver</TableHead>
+                <TableHead className="text-center font-semibold text-slate-700">Status</TableHead>
+                <TableHead className="text-center font-semibold text-slate-700">Manifest</TableHead>
+                <TableHead className="text-right font-semibold text-slate-700">Freight Revenue</TableHead>
+                <TableHead className="text-right font-semibold text-slate-700">Direct Road Costs</TableHead>
+                <TableHead className="text-right font-semibold text-slate-700">Net Trip P/L</TableHead>
+                <TableHead className="text-right font-semibold text-slate-700">Driver Ledger</TableHead>
+                <TableHead className="text-right w-[100px] font-semibold text-slate-700">Ledger</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredTrips.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8 text-xs text-slate-500">
-                    No trips match the current filter or date range.
+                  <TableCell colSpan={9} className="text-center py-12 text-xs text-slate-400">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <Layers className="h-8 w-8 text-slate-300" />
+                      <span>No trips match the current filter or date range.</span>
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredTrips.map((trip) => {
+                filteredTrips.map((trip, idx) => {
                   const isPositive = trip.netPLPaise >= 0;
 
                   return (
-                    <TableRow key={trip.id} className="text-xs hover:bg-slate-50/80">
+                    <TableRow
+                      key={trip.id}
+                      className={cn(
+                        'text-xs hover:bg-slate-50/80 border-b border-slate-100 transition-colors',
+                        idx % 2 === 1 ? 'bg-slate-50/30' : 'bg-white'
+                      )}
+                    >
                       {/* Route */}
                       <TableCell>
                         <div className="flex items-center gap-1.5 font-bold">
-                          <Badge variant="outline" className="font-mono text-[10px] bg-slate-100 text-slate-800">
+                          <Badge variant="outline" className="font-mono text-[10px] bg-slate-100 text-slate-800 border-slate-200">
                             {trip.fromHub.hub_code}
                           </Badge>
                           <ArrowRight className="h-3 w-3 text-slate-400" />
-                          <Badge variant="outline" className="font-mono text-[10px] bg-slate-100 text-slate-800">
+                          <Badge variant="outline" className="font-mono text-[10px] bg-slate-100 text-slate-800 border-slate-200">
                             {trip.toHub.hub_code}
                           </Badge>
                         </div>
                         <div className="text-[10px] text-slate-500 mt-0.5">
-                          {trip.fromHub.city} → {trip.toHub.city}
+                          {trip.fromHub.city} &rarr; {trip.toHub.city}
                         </div>
                       </TableCell>
 
@@ -177,13 +158,12 @@ export function TripPLTable({ trips }: TripPLTableProps) {
                       <TableCell className="text-center">
                         <Badge
                           variant="outline"
-                          className={`text-[10px] font-semibold ${
-                            trip.status === 'IN_TRANSIT'
-                              ? 'bg-blue-50 text-blue-800 border-blue-200'
-                              : trip.status === 'COMPLETED'
-                              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                              : 'bg-slate-100 text-slate-700'
-                          }`}
+                          className={cn(
+                            'text-[10px] font-semibold',
+                            trip.status === 'IN_TRANSIT' && 'bg-blue-50 text-blue-800 border-blue-200',
+                            trip.status === 'COMPLETED' && 'bg-emerald-50 text-emerald-800 border-emerald-200',
+                            trip.status === 'SCHEDULED' && 'bg-slate-100 text-slate-700 border-slate-200'
+                          )}
                         >
                           {trip.status}
                         </Badge>
@@ -191,30 +171,31 @@ export function TripPLTable({ trips }: TripPLTableProps) {
 
                       {/* Manifest count */}
                       <TableCell className="text-center">
-                        <Badge variant="outline" className="text-[10px] bg-slate-50 text-slate-800">
+                        <Badge variant="outline" className="text-[10px] bg-slate-50 text-slate-700 font-mono border-slate-200">
                           {trip.lrCount} LRs
                         </Badge>
                       </TableCell>
 
                       {/* Freight Revenue */}
-                      <TableCell className="text-right font-bold text-slate-900">
+                      <TableCell className="text-right font-bold text-slate-900 font-sans">
                         {paiseToCurrency(trip.freightRevenuePaise)}
                       </TableCell>
 
                       {/* Trip Expenses */}
-                      <TableCell className="text-right text-rose-700 font-medium">
+                      <TableCell className="text-right text-rose-700 font-medium font-sans">
                         {paiseToCurrency(trip.totalExpensesPaise)}
                       </TableCell>
 
                       {/* Net Trip P/L */}
-                      <TableCell className="text-right font-bold">
+                      <TableCell className="text-right font-bold font-sans">
                         <div
-                          className={`flex items-center justify-end gap-1 ${
+                          className={cn(
+                            'flex items-center justify-end gap-1',
                             isPositive ? 'text-emerald-700' : 'text-rose-700'
-                          }`}
+                          )}
                         >
                           {isPositive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                          {paiseToCurrency(trip.netPLPaise)}
+                          <span>{paiseToCurrency(trip.netPLPaise)}</span>
                         </div>
                       </TableCell>
 
@@ -226,13 +207,14 @@ export function TripPLTable({ trips }: TripPLTableProps) {
                           </Badge>
                         ) : (
                           <span
-                            className={`text-xs font-semibold ${
+                            className={cn(
+                              'text-xs font-semibold font-sans',
                               trip.driverBalancePaise > 0
                                 ? 'text-blue-700'
                                 : trip.driverBalancePaise < 0
                                 ? 'text-amber-700'
                                 : 'text-slate-500'
-                            }`}
+                            )}
                           >
                             {paiseToCurrency(trip.driverBalancePaise)}
                           </span>
@@ -246,10 +228,10 @@ export function TripPLTable({ trips }: TripPLTableProps) {
                             type="button"
                             variant="outline"
                             size="sm"
-                            className="h-7 text-xs px-2.5 font-semibold text-blue-700 bg-blue-50/70 border-blue-200 hover:bg-blue-100 shadow-2xs"
+                            className="h-7 text-xs px-2.5 font-semibold text-blue-700 bg-blue-50/70 border-blue-200 hover:bg-blue-100 shadow-2xs rounded-md"
                           >
                             <ExternalLink className="h-3 w-3 mr-1" />
-                            Ledger
+                            <span>Expenses</span>
                           </Button>
                         </Link>
                       </TableCell>
@@ -258,15 +240,15 @@ export function TripPLTable({ trips }: TripPLTableProps) {
                 })
               )}
 
-              {/* Total Row */}
+              {/* Total Summary Row */}
               {filteredTrips.length > 0 && (
-                <TableRow className="bg-slate-100/70 font-bold text-xs border-t-2 border-slate-300">
-                  <TableCell colSpan={4} className="uppercase text-slate-800 tracking-wider">
-                    Total ({filteredTrips.length} Trips)
+                <TableRow className="bg-slate-100/90 font-bold text-xs border-t-2 border-slate-300 shadow-2xs">
+                  <TableCell colSpan={4} className="uppercase text-slate-900 tracking-wider font-bold">
+                    Filtered Total ({filteredTrips.length} Trips)
                   </TableCell>
-                  <TableCell className="text-right text-slate-900">{paiseToCurrency(totalRevenue)}</TableCell>
-                  <TableCell className="text-right text-rose-800">{paiseToCurrency(totalExpenses)}</TableCell>
-                  <TableCell className={`text-right ${totalNet >= 0 ? 'text-emerald-800' : 'text-rose-800'}`}>
+                  <TableCell className="text-right text-slate-900 font-sans">{paiseToCurrency(totalRevenue)}</TableCell>
+                  <TableCell className="text-right text-rose-800 font-sans">{paiseToCurrency(totalExpenses)}</TableCell>
+                  <TableCell className={cn('text-right font-sans', totalNet >= 0 ? 'text-emerald-800' : 'text-rose-800')}>
                     {paiseToCurrency(totalNet)}
                   </TableCell>
                   <TableCell colSpan={2}></TableCell>
