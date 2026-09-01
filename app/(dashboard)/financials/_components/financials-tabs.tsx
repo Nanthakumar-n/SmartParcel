@@ -6,7 +6,6 @@ import {
   TrendingUp,
   Building2,
   Truck,
-  TableProperties,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -72,11 +71,6 @@ export function FinancialsTabs({
       {/* Excel Workbook Sheet Tab Bar */}
       <div className="bg-slate-100/90 border border-b-0 border-slate-300/80 rounded-t-xl px-2 pt-2 flex items-center justify-between gap-2 overflow-x-auto shadow-2xs">
         <div className="flex items-center gap-1.5 min-w-max">
-          <div className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-slate-500 mr-1 select-none">
-            <TableProperties className="h-4 w-4 text-blue-600" />
-            <span className="hidden sm:inline font-mono text-[11px]">Financial Workbook</span>
-          </div>
-
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
