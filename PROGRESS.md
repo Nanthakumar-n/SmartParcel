@@ -485,17 +485,13 @@ Paste this as your opening message in the next chat:
   - `npm run lint`: ✅ 0 warnings, 0 errors.
 ---
 
-## 🔲 Up Next — Phase 1.5 Remaining Features
+## 🔲 Up Next — Phase 1.5 Remaining Features (Edge Functions)
 
-### 1. WhatsApp Notifications via WATI (Edge Functions + DB Webhooks)
-- Automatic notifications on LR creation (`BOOKED`), in-transit departure (`IN_TRANSIT`), and delivery confirmation (`DELIVERED`).
-- Idempotent notification logging table (`whatsapp_notifications_log`).
-- WATI REST API payload formatting for Indian numbers (+91).
-
-### 2. Tenant Settings Page (`/settings`)
-- Tenant branding & company details (Company name, logo, contact, GSTIN).
-- Default LR terms & conditions editor.
-- Hub sequence prefix management.
+### 1. WhatsApp Notifications via WATI (Supabase Edge Functions + DB Webhooks)
+- `supabase/functions/whatsapp-notify/index.ts`: Triggered via Supabase DB Webhook on `lorry_receipts` update (`BOOKED`, `IN_TRANSIT`, `ARRIVED`, `OUT_FOR_DELIVERY`, `DELIVERED`).
+- `supabase/functions/payment-reminder/index.ts`: Triggered daily via `pg_cron` at 10:00 AM IST to send follow-ups on unpaid `TO_PAY` shipments based on `payment_reminder_days`.
+- Idempotent writes to `whatsapp_notifications_log` preventing duplicate dispatches.
+- WATI REST API payload formatting for Indian numbers (`+91`).
 
 ---
 
@@ -504,7 +500,7 @@ Paste this as your opening message in the next chat:
 Paste this prompt to kick off the next session:
 
 ```
-Read CONTEXT.md, .agents/AGENTS.md, and PROGRESS.md. Run /session-lifecycle to start the development session.
+Read CONTEXT.md, .agents/AGENTS.md, and PROGRESS.md. Run /session-lifecycle to start the development session and begin implementing the WhatsApp WATI Edge Functions.
 ```
 
 
