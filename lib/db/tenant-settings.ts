@@ -11,6 +11,38 @@ export type NotificationLogInsert = Database['public']['Tables']['whatsapp_notif
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnySupabaseClient = SupabaseClient<Database, any, any>;
 
+const TENANT_SETTINGS_COLUMNS = `
+  id,
+  tenant_id,
+  lr_terms_and_conditions,
+  lr_default_remarks,
+  whatsapp_enabled,
+  wati_api_endpoint,
+  wati_api_token,
+  notification_preferences,
+  payment_reminder_days,
+  waybill_format,
+  waybill_copies,
+  show_gst_breakdown,
+  show_tracking_qr,
+  show_terms_on_print,
+  created_at,
+  updated_at
+`;
+
+const NOTIFICATION_LOG_COLUMNS = `
+  id,
+  tenant_id,
+  lr_id,
+  event_type,
+  recipient_phone,
+  wati_message_id,
+  status,
+  reminder_sequence,
+  error_message,
+  sent_at
+`;
+
 /**
  * Get tenant settings by tenant ID.
  */
@@ -20,7 +52,7 @@ export async function getTenantSettings(
 ): Promise<TenantSettingsRow | null> {
   const { data, error } = await supabase
     .from('tenant_settings')
-    .select('*')
+    .select(TENANT_SETTINGS_COLUMNS)
     .eq('tenant_id', tenantId)
     .maybeSingle();
 
@@ -47,7 +79,7 @@ export async function upsertTenantSettings(
   const { data, error } = await supabase
     .from('tenant_settings')
     .upsert(payload, { onConflict: 'tenant_id' })
-    .select()
+    .select(TENANT_SETTINGS_COLUMNS)
     .single();
 
   if (error) {
@@ -66,7 +98,7 @@ export async function getRecentNotificationLogs(
 ): Promise<NotificationLogRow[]> {
   const { data, error } = await supabase
     .from('whatsapp_notifications_log')
-    .select('*')
+    .select(NOTIFICATION_LOG_COLUMNS)
     .eq('tenant_id', tenantId)
     .order('sent_at', { ascending: false })
     .limit(limit);

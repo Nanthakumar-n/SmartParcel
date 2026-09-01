@@ -55,7 +55,7 @@ export async function insertTenant(
   const { data, error } = await supabase
     .from('tenants')
     .insert(tenantData)
-    .select()
+    .select('id, name, slug, gstin, contact_phone, address_line1, city, state, pin_code, created_at, updated_at')
     .single();
 
   if (error) {
