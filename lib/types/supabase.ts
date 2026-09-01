@@ -536,6 +536,71 @@ export type Database = {
           },
         ]
       }
+      tenant_settings: {
+        Row: {
+          created_at: string
+          id: string
+          lr_default_remarks: string | null
+          lr_terms_and_conditions: string | null
+          notification_preferences: Json
+          payment_reminder_days: number
+          show_gst_breakdown: boolean
+          show_terms_on_print: boolean
+          show_tracking_qr: boolean
+          tenant_id: string
+          updated_at: string
+          wati_api_endpoint: string | null
+          wati_api_token: string | null
+          waybill_copies: number
+          waybill_format: string
+          whatsapp_enabled: boolean
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lr_default_remarks?: string | null
+          lr_terms_and_conditions?: string | null
+          notification_preferences?: Json
+          payment_reminder_days?: number
+          show_gst_breakdown?: boolean
+          show_terms_on_print?: boolean
+          show_tracking_qr?: boolean
+          tenant_id: string
+          updated_at?: string
+          wati_api_endpoint?: string | null
+          wati_api_token?: string | null
+          waybill_copies?: number
+          waybill_format?: string
+          whatsapp_enabled?: boolean
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lr_default_remarks?: string | null
+          lr_terms_and_conditions?: string | null
+          notification_preferences?: Json
+          payment_reminder_days?: number
+          show_gst_breakdown?: boolean
+          show_terms_on_print?: boolean
+          show_tracking_qr?: boolean
+          tenant_id?: string
+          updated_at?: string
+          wati_api_endpoint?: string | null
+          wati_api_token?: string | null
+          waybill_copies?: number
+          waybill_format?: string
+          whatsapp_enabled?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenants: {
         Row: {
           address_line1: string | null
@@ -1119,6 +1184,60 @@ export type Database = {
           },
           {
             foreignKeyName: "vehicles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_notifications_log: {
+        Row: {
+          error_message: string | null
+          event_type: string
+          id: string
+          lr_id: string | null
+          recipient_phone: string
+          reminder_sequence: number | null
+          sent_at: string
+          status: string
+          tenant_id: string
+          wati_message_id: string | null
+        }
+        Insert: {
+          error_message?: string | null
+          event_type: string
+          id?: string
+          lr_id?: string | null
+          recipient_phone: string
+          reminder_sequence?: number | null
+          sent_at?: string
+          status: string
+          tenant_id: string
+          wati_message_id?: string | null
+        }
+        Update: {
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          lr_id?: string | null
+          recipient_phone?: string
+          reminder_sequence?: number | null
+          sent_at?: string
+          status?: string
+          tenant_id?: string
+          wati_message_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_notifications_log_lr_id_fkey"
+            columns: ["lr_id"]
+            isOneToOne: false
+            referencedRelation: "lorry_receipts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_notifications_log_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"

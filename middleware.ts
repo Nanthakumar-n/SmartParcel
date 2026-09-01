@@ -12,6 +12,8 @@ const FLEET_OWNER_ONLY = [
   '/drivers',
   '/users',
   '/trip-schedules',
+  '/settings',
+  '/financials',
 ];
 
 export async function middleware(request: NextRequest) {

@@ -18,6 +18,7 @@ import {
   ExternalLink,
   Receipt,
   TrendingUp,
+  Sliders,
 } from 'lucide-react';
 
 interface NavItem {
@@ -96,6 +97,12 @@ export function SidebarNav() {
       title: 'User Management',
       href: '/users',
       icon: Users,
+      fleetOwnerOnly: true,
+    },
+    {
+      title: 'Tenant Settings',
+      href: '/settings',
+      icon: Sliders,
       fleetOwnerOnly: true,
     },
   ];

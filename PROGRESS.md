@@ -16,7 +16,42 @@
 - Truck Registry current location tracking (`current_hub_id`), auto-location updates upon trip arrival, and human-readable label resolution.
 - Hub branches live operational metrics (In-station trucks, incoming dispatches/LRs, outgoing dispatches/LRs).
 
-> Next Phase: **Phase 1.5 (Web-only)** — Driver Trip Expense Ledger, WhatsApp Notifications via WATI, Tenant Settings page.
+> Next Phase: **Phase 1.5 (Web-only)** — WhatsApp Notifications via WATI (Edge Functions).
+
+## 🚧 Completed — Tenant Settings & WATI Integration Page (Session 8.5 — 2026-08-31)
+
+### Milestone 8.5: Tenant Settings & WATI Configuration (`/settings`)
+
+- [x] **Database Migrations & RLS Security (`20250101000015_tenant_settings.sql` & `20250101000016_waybill_format_settings.sql`)**:
+  - `tenant_settings` table: Multi-tenant RLS, 1-to-1 with `tenants`, storing legal LR terms & conditions, default remarks, master WhatsApp toggle, WATI API endpoint, masked WATI token, notification preferences JSONB, payment reminder delay days, waybill print format (`THERMAL_3INCH`, `A4_STANDARD`, `A5_LANDSCAPE`), waybill copies (1–3), and print toggles (`show_gst_breakdown`, `show_tracking_qr`, `show_terms_on_print`).
+  - `whatsapp_notifications_log` table: Multi-tenant RLS with idempotency unique indexes (partial unique index for one-time triggers, unique sequence index for daily reminders).
+  - Strict Fleet Owner only UPDATE/INSERT RLS policies for `tenant_settings`.
+- [x] **Validation & Service Architecture (`lib/validations/tenant-settings.ts`, `lib/services/tenant-settings.ts`, `lib/db/tenant-settings.ts`)**:
+  - Zod schemas with India-specific regexes (`GSTIN_REGEX`, `INDIA_PHONE_REGEX`, `PIN_CODE_REGEX`, `SLUG_REGEX`).
+  - Customizable public booking portal URL slug with real-time lowercase/hyphen formatting and tenant collision protection.
+  - Secure token handling: Token is masked with `••••••••••••••••` and preserved if not explicitly overwritten.
+  - WATI connection test service: Real-time endpoint health validation via fetch to `/api/v1/getTemplates`.
+- [x] **Server Actions (`app/(dashboard)/settings/actions.ts`)**:
+  - `updateCompanyProfileAction`: Updates company name, custom booking URL slug, GSTIN, phone, and head office address.
+  - `updateLRSettingsAction`: Updates default terms and conditions, consignment remarks, waybill print format (Thermal 3-Inch, A4, A5), copies, and print options.
+  - `updateWhatsAppSettingsAction`: Updates WATI credentials, notification triggers, and reminder grace period.
+  - `testWatiConnectionAction`: Tests live WATI API endpoint and token.
+  - Role-guarded for `fleet_owner` only.
+- [x] **UI Pages & Components (`app/(dashboard)/settings/`)**:
+  - `page.tsx`: Server Component with role guard, company badge header, and tab navigation.
+  - `loading.tsx`: Skeleton loader matching the Excel workbook layout.
+  - `settings-tabs.tsx`: Excel-style workbook tab container (`Company Profile`, `Waybill Defaults & T&C`, `WhatsApp / WATI Gateway`, `Dispatch & Delivery Logs`).
+  - `company-profile-form.tsx`: Organization details, editable custom booking slug with live preview (`smartparcel.in/book/[slug]`), one-click URL copy, GSTIN, contact phone, and head office address.
+  - `lr-settings-form.tsx`: Waybill format selection cards (3-Inch Thermal, A4 Multi-Copy, A5 Landscape), copy selector, GST/QR/Terms toggles, legal T&C with one-click reset, and live dynamic print simulator.
+  - `whatsapp-settings-form.tsx`: Master WhatsApp toggle, WATI gateway credentials, masked token reveal toggle, live connection tester button, 6 event trigger switches, and payment reminder delay selector.
+  - `notification-logs-sheet.tsx`: Full-width audit logs table with search filter, status filter pills (`All`, `Delivered`, `Pending`, `Failed`), and formatted IST timestamps.
+  - `components/shared/sidebar-nav.tsx`: Added "Tenant Settings" link under Fleet Administration.
+- [x] **Quality Gate & Verification**:
+  - `npx tsc --noEmit`: ✅ 0 errors.
+  - `npm run lint`: ✅ 0 warnings, 0 errors.
+  - `npm run build`: ✅ All 20 routes compiled successfully.
+
+---
 
 ## 🚧 Completed — Revenue Management & Fleet P&L Analytics (Session 8.4 — 2026-08-30)
 

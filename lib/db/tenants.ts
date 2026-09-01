@@ -63,3 +63,27 @@ export async function insertTenant(
   }
   return data;
 }
+
+/**
+ * Update tenant profile details.
+ */
+export async function updateTenant(
+  supabase: AnySupabaseClient,
+  id: string,
+  updates: Database['public']['Tables']['tenants']['Update']
+): Promise<TenantRow | null> {
+  const { data, error } = await supabase
+    .from('tenants')
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select('id, name, slug, gstin, contact_phone, address_line1, city, state, pin_code, created_at, updated_at')
+    .single();
+
+  if (error) {
+    throw error;
+  }
+  return data;
+}
+
+
+
