@@ -189,15 +189,26 @@ export const supabase = createBrowserClient<Database>(
 
 ## 8. Database Query Patterns
 
-### Select Only Needed Columns
-Never use `.select('*')` in production. Always specify columns:
+### Select Only Needed Columns (Named Column Constants)
+Never use `.select('*')` or bare `.select()` on mutations. Always define explicit column string constants at the top of each `lib/db/<domain>.ts` file:
 ```typescript
-// ❌ Reject
-await supabase.from('lorry_receipts').select('*');
+// ✅ Accept — explicit named column projection
+export const LORRY_RECEIPT_COLUMNS = `
+  id,
+  lr_number,
+  status,
+  freight_amount,
+  from_hub:hubs!from_hub_id(name),
+  to_hub:hubs!to_hub_id(name)
+`;
 
-// ✅ Accept — includes join to avoid N+1
-await supabase.from('lorry_receipts')
-  .select('id, lr_number, status, from_hub:hubs!from_hub_id(name)');
+export async function getLRById(supabase: AnySupabaseClient, id: string) {
+  return await supabase
+    .from('lorry_receipts')
+    .select(LORRY_RECEIPT_COLUMNS)
+    .eq('id', id)
+    .maybeSingle();
+}
 ```
 
 ### Pagination
@@ -254,21 +265,43 @@ const form = useForm<LRCreateInput>({
 - Use `toast` from `sonner` for success/error notifications — connect to `ActionResult` errors.
 - Extend with Tailwind utility classes. Never override shadcn component internals.
 
+### Form Provider Context Boundary Invariant
+- **Never place `<FormField>` outside `<Form {...form}>`**.
+- If a form includes a top ribbon, master toggle switch, or multi-section header that binds to form state, `<Form {...form}><form ...>` must wrap the entire component tree from the very top.
+- Failure to do this causes a runtime crash: `Cannot destructure property 'getFieldState' of '...useFormContext()'`.
+
 ```typescript
-<FormField control={form.control} name="consignor_phone"
-  render={({ field }) => (
-    <FormItem>
-      <FormLabel>Consignor Phone</FormLabel>
-      <FormControl><Input placeholder="+91 98765 43210" {...field} /></FormControl>
-      <FormMessage /> {/* Auto-shows zod error */}
-    </FormItem>
-  )}
-/>
+<Form {...form}>
+  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+    {/* ✅ Top ribbon switch is safely inside Form context */}
+    <div className="p-4 bg-emerald-50 rounded-xl">
+      <FormField
+        control={form.control}
+        name="whatsapp_enabled"
+        render={({ field }) => (
+          <FormItem>
+            <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+          </FormItem>
+        )}
+      />
+    </div>
+    {/* Remaining fields */}
+  </form>
+</Form>
 ```
 
 ---
 
-## 11. Keyboard-First Forms (Hub Manager UX)
+## 11. Layout & Enterprise Workspace Design (Workbook Sheet Pattern)
+
+- **Full-Width Canvas Utilization**: Avoid squished side-by-side card wrappers that consume only 20% width and leave dead margins.
+- **Excel-Style Workbook Sheet Tabs**: Use horizontal sheet tabs (`Company Profile`, `Waybill Defaults`, `WhatsApp Gateway`, `Audit Logs`) with icon badges and active tab indicator strips.
+- **Multi-Column Responsive Sections**: Structure long forms into clear 2-column or 3-column enterprise grid rows with contextual subtitles.
+- **Live Simulator Panels**: Pair configuration inputs with real-time visual output mocks (e.g. 3-inch thermal waybill simulator).
+
+---
+
+## 12. Keyboard-First Forms (Hub Manager UX)
 
 - Logical `tabIndex` order matching the visual layout.
 - All dropdowns keyboard-navigable (use shadcn `Select`, not native `<select>`).

@@ -27,13 +27,17 @@ Execute these steps at the beginning of every session before writing any feature
   docker info > /dev/null 2>&1 || open /Applications/Docker.app
   ```
 
-### 3. Service Initialization
+### 3. Service Initialization & Cache Hygiene
 - [ ] Start Supabase local development stack:
   ```bash
   supabase start
   ```
   *(Verifies Postgres, GoTrue Auth, PostgREST, and Storage containers are running).*
 - [ ] Verify `.env.local` contains valid local Supabase credentials (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`).
+- [ ] **Cache Hygiene & Stale Chunk Recovery**: If Next.js throws chunk resolution errors (e.g. `MODULE_NOT_FOUND` in `.next/server/vendor-chunks/`), purge `.next` before starting dev server:
+  ```bash
+  rm -rf .next
+  ```
 - [ ] Start Next.js development server (in background):
   ```bash
   npm run dev
